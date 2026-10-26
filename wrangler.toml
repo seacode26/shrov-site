@@ -4,7 +4,11 @@ name = "shrov-site"
 compatibility_date = "2026-10-01"
 workers_dev = false
 preview_urls = false
-routes = [{ pattern = "www.shrov.com", custom_domain = true }]
+# shrov.com (apex) is attached too; a Cloudflare Redirect Rule sends it to www (README → Deploy)
+routes = [
+  { pattern = "www.shrov.com", custom_domain = true },
+  { pattern = "shrov.com", custom_domain = true },
+]
 
 [assets]
 directory = "./public"

@@ -27,4 +27,4 @@ CI rebuilds and fails if `public/` is stale, and runs a secret scan.
 `wrangler.toml` is set up as follows:
 - It serves `public/` as static assets on the custom domain `www.shrov.com`, with `workers.dev` and preview URLs off.
 - Security headers come from `public/_headers`.
-- To serve the bare `shrov.com` as well, add it as a second custom domain, or add a redirect rule from `shrov.com` to `www`. Check first that no existing DNS record on the apex conflicts.
+- **Bare `shrov.com`:** `wrangler.toml` attaches it as a second custom domain, which creates its DNS record and certificate. A Redirect Rule then sends visitors to www. The rule was created once in the dashboard: shrov.com → Rules → Redirect Rules → template *Redirect from root to WWW* (or a custom rule: hostname equals `shrov.com` → dynamic `concat("https://www.shrov.com", http.request.uri.path)`, 301, preserve query string). The deploy fails if the apex already has an A, AAAA or CNAME record; delete that record first. MX and TXT records from Email Routing are unaffected.
