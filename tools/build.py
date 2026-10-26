@@ -69,7 +69,7 @@ def refresh(lab):
     (CONTENT / "paper.html").write_text(paper, encoding="utf-8")
 
 
-NAV = """<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a></span></nav>"""
+NAV = """<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>"""
 NAV_CSS = """
 nav.site{max-width:1000px;margin:0 auto;padding:18px 28px 0;display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.06em}
 nav.site a{color:var(--muted);text-decoration:none}
