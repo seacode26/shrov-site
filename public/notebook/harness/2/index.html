@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The harness (2/2) — Lab notebook — shrov</title>
+<meta name="description" content="One design rule, the broker connection, paper-only safeguards, risk limits and alerting.">
+<meta property="og:title" content="The harness (2/2) — Lab notebook — shrov">
+<meta property="og:description" content="One design rule, the broker connection, paper-only safeguards, risk limits and alerting.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 1 of 7 · page 2 of 2</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" aria-current="page" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">The harness <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/harness/">1</a><a href="/notebook/harness/2/" aria-current="page">2</a></nav><article class="nbody"><h2 id="what-the-sandbox-lies-about">What the sandbox lies about</h2>
+<p>Paper is a correctness harness, not a performance oracle:</p>
+<ul>
+<li><strong>Fills are optimistic.</strong> Simulated against the NBBO with no queue position,
+  so any passive/limit strategy will look better than it is.</li>
+<li><strong>No market impact, ever.</strong> Size is free.</li>
+<li><strong>Delayed data by default.</strong> <code>quote()</code> returns a <code>delayed</code> flag — if it is
+  <code>True</code>, fills against those prices are not evidence of anything.</li>
+<li>Paper accounts reset and occasionally drift from what your journal thinks.</li>
+</ul>
+<p>Performance claims come from replay backtests over journalled snapshots with an
+explicit slippage model (milestone 4), not from these fills.</p>
+<h2 id="risk-limits">Risk limits</h2>
+<p>Defaults in <code>labtrader/config.py</code>. Limits live in code, not in prompts — a
+prompt is a suggestion, this is a constraint.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max single position</td>
+<td>5% NAV</td>
+</tr>
+<tr>
+<td>Max sector</td>
+<td>25% NAV</td>
+</tr>
+<tr>
+<td>Max gross exposure</td>
+<td>100% (no margin)</td>
+</tr>
+<tr>
+<td>Orders per agent per day</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Notional per agent per day</td>
+<td>$50,000</td>
+</tr>
+<tr>
+<td>Drawdown halt</td>
+<td>15%, manual re-arm</td>
+</tr>
+<tr>
+<td>Limit price deviation</td>
+<td>10% from reference</td>
+</tr>
+<tr>
+<td>Shorting</td>
+<td>disabled</td>
+</tr>
+<tr>
+<td>Session</td>
+<td>RTH only</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>De-risking is always allowed.</strong> A limit only bites if the trade makes an
+already-bad number worse — otherwise a risk-reducing agent gets locked out
+exactly when it is needed. See <code>TestDeRiskingAlwaysAllowed</code>.</p>
+<p>The drawdown halt is the deliberate exception: it blocks selling too, so
+flattening after a 15% loss is a human decision.</p>
+<h2 id="alerting">Alerting</h2>
+<p>Silence is the failure mode: a run that did not happen looks exactly like a run
+that decided to do nothing. A heartbeat goes out on every run, so a quiet phone
+on a weekday means something is broken.</p>
+<pre><code class="language-bash">python -m labtrader.notify --discover   # after messaging your bot once
+python -m labtrader.notify --test
+</code></pre>
+<p>Credentials live in a gitignored <code>.env</code> (see <code>.env.example</code>), never in code.
+No dependencies — the Telegram Bot API is plain HTTPS.</p>
+<p><code>Notifier.send</code> returns a bool and never raises on ordinary failures: Telegram
+being down is not a reason to skip a rebalance or abandon half-submitted
+orders. Containment stops at <code>BaseException</code> so Ctrl+C still works.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/harness/"><small>← Previous</small>The one design decision</a><a class="next" href="/notebook/costs/"><small>Next →</small>Backtesting and costs: Backtesting (milestone 4)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

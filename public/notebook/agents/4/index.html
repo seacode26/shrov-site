@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM agents (4/4) — Lab notebook — shrov</title>
+<meta name="description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<meta property="og:title" content="LLM agents (4/4) — Lab notebook — shrov">
+<meta property="og:description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 4 of 7 · page 4 of 4</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" aria-current="page" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">LLM agents <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/agents/">1</a><a href="/notebook/agents/2/">2</a><a href="/notebook/agents/3/">3</a><a href="/notebook/agents/4/" aria-current="page">4</a></nav><article class="nbody"><h3 id="result-the-veto-lost-money">Result: the veto lost money</h3>
+<p>463 rebalances, zero model failures, $9.48. Full output in
+<code>results/veto_ab_2026-09-08.txt</code>.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>return</th>
+<th>maxDD</th>
+<th>Sharpe</th>
+<th>turnover</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>momentum</td>
+<td><strong>+361.7%</strong></td>
+<td>27.5%</td>
+<td>1.04</td>
+<td>29.8x</td>
+</tr>
+<tr>
+<td>momentum + veto</td>
+<td><strong>+249.8%</strong></td>
+<td>24.4%</td>
+<td>0.99</td>
+<td>29.3x</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+262.7%</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>equal-weight 111</td>
+<td>+324.3%</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>−111.9 points.</strong> It bought a 3.1-point drawdown reduction for a third of the
+return, and Sharpe fell. The vetoed strategy underperforms both benchmarks; the
+unvetoed one beat them.</p>
+<p>Two diagnostics say why, and neither is "the model was unlucky".</p>
+<p><strong>It vetoed the wrong names.</strong> Over the following 5 sessions the vetoed
+candidates returned <strong>+0.633%</strong> against <strong>+0.343%</strong> for the kept ones — the
+veto systematically removed the <em>better</em> half (t = +1.38, so not significant,
+but pointing the wrong way). Its stated reasons were sound-sounding — high
+realised volatility, negative longer-horizon returns — and in this universe
+those were the names that went up.</p>
+<p><strong>It never adapted.</strong> The veto rate sat between 16.7% and 21.2% every single
+year, with 2022 (21.2%) indistinguishable from 2021 (16.7%). It was sold as
+regime awareness and delivered a <strong>flat ~19% haircut</strong> — which a rule could
+apply for free, and which is exactly the failure mode the design was meant to
+avoid.</p>
+<p>The one thing it did do is cut the drawdown, which is what indiscriminately
+holding back ~19% of buying does.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/agents/3/"><small>← Previous</small>The veto agent (labtrader/veto.py)</a><a class="next" href="/notebook/capacity/"><small>Next →</small>Small caps and turnover: The small-cap test</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

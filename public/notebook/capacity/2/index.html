@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Small caps and turnover (2/2) — Lab notebook — shrov</title>
+<meta name="description" content="Why the capacity argument defeats itself, and what slowing down revealed.">
+<meta property="og:title" content="Small caps and turnover (2/2) — Lab notebook — shrov">
+<meta property="og:description" content="Why the capacity argument defeats itself, and what slowing down revealed.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 5 of 7 · page 2 of 2</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" aria-current="page" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Small caps and turnover <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/capacity/">1</a><a href="/notebook/capacity/2/" aria-current="page">2</a></nav><article class="nbody"><h2 id="low-turnover-the-cost-problem-is-solved-the-signal-problem-replaces-it">Low turnover: the cost problem is solved, the signal problem replaces it</h2>
+<p>Full surface in <code>results/turnover_sweep_2026-09-09.txt</code>. 12 configurations per
+universe (lookback 60/120/250 × hold 21/63/126/252), costs applied through
+<code>costs.sensitivity()</code> rather than by re-running, position-age rule disabled so
+it cannot force closes inside a 252-session hold.</p>
+<p><strong>Costs stop mattering.</strong> Turnover falls from 22–30x to 0.6–3.6x. In small caps
+the spread drag collapses from 43 points at the weekly baseline to under 2 at an
+annual hold. The 14.27bps toll that killed the fast version is no longer the
+binding constraint.</p>
+<p><strong>But the surface is a random field.</strong> Excess over equal-weight ranges from
+−228 to +225 points with a standard deviation of ~129, and the largest swing
+from a <em>single</em> parameter step is <strong>302 points</strong> (large cap, hold 126, lookback
+120→250). A real effect produces a gradient. This does not.</p>
+<p>Main effects are the only honest read, and they are weak:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large</th>
+<th>small</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lookback 60d</td>
+<td>−18.8</td>
+<td>−159.3</td>
+</tr>
+<tr>
+<td>lookback 120d</td>
+<td>−45.2</td>
+<td>−42.2</td>
+</tr>
+<tr>
+<td><strong>lookback 250d</strong></td>
+<td><strong>+109.8</strong></td>
+<td><strong>+0.8</strong></td>
+</tr>
+<tr>
+<td>hold 21d</td>
+<td>+151.4</td>
+<td>−16.2</td>
+</tr>
+<tr>
+<td>hold 252d</td>
+<td>−97.8</td>
+<td>−97.7</td>
+</tr>
+</tbody>
+</table></div>
+<p>Long formation with a short hold — the canonical 12-1 momentum specification —
+is the only direction that shows up in both universes, and it is a <strong>prior from
+the literature rather than a post-hoc pick</strong>, which is the one thing that makes
+it worth noting at all.</p>
+<p><strong>The standout cell is what selection looks like.</strong> look=250/hold=21 in large
+caps returned +225% over equal-weight, or <strong>+4.82%/yr</strong>. But it was chosen from
+12 cells whose mean is +15.2 and whose sd is 129 — under a pure-noise null the
+expected maximum of 12 draws sits ~210 points above the mean. The observed 225
+is almost exactly what noise produces when you sort it. And at 9.2 years, even
+an information ratio of 0.5 only reaches t=1.52.</p>
+<p>Slowing down fixed the cost problem and revealed that there was never enough
+statistical power to see the signal underneath it.</p>
+<h3 id="pre-registered-test-of-the-standout-cell">Pre-registered test of the standout cell</h3>
+<p><code>look=250 / hold=21</code>, single configuration, no sweep. Year-by-year excess over
+equal-weight:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large cap</th>
+<th>small cap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>years positive</td>
+<td><strong>5 / 9</strong></td>
+<td><strong>4 / 9</strong></td>
+</tr>
+<tr>
+<td>mean excess</td>
+<td>+5.5%/yr</td>
+<td>+3.9%/yr</td>
+</tr>
+<tr>
+<td>t</td>
+<td><strong>1.07</strong></td>
+<td><strong>1.32</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The large-cap +225% comes almost entirely from three years — 2020 (+26.3%),
+2024 (+19.9%), 2026 (+24.9%). Six of nine years are flat or negative. That is
+the shape of a few lucky stretches, not an edge.</p>
+<p>Both t-statistics are what a sweep's best cell looks like when you test it
+honestly. Confirmed noise.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/capacity/"><small>← Previous</small>The small-cap test</a><a class="next" href="/notebook/neutral/"><small>Next →</small>Market-neutral: Market-neutral construction (labtrader/neutral.py)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

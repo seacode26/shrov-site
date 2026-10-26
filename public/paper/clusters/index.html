@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §3 · Thirty-one signals are six bets</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §3 · Thirty-one signals are six bets">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+<script src="/paper/figures.js" defer></script>
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 6 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" aria-current="page" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section><div class="sechead"><div class="secnum">§ 3</div><h2 class="title">The central result, continued</h2></div>
+<h3><span class="tag">3.2</span>Twenty-five of thirty-one are one cluster</h3>
+
+  <figure>
+    <div class="chart" id="fig-eig"></div>
+    <figcaption><b>Figure 2 — Eigenvalue spectrum of the IC correlation matrix</b>
+    If the 31 signals were independent every eigenvalue would equal 1.0 (dashed line) and the participation ratio would be 31. Instead the leading eigenvalue is 10.70 — a third of the total on its own — and the first three carry 65.5%. Twenty-four of the thirty-one fall below 1.0, meaning they contribute less than one signal's worth of independent variation each. Effective breadth, the participation ratio (Σλ)²/Σλ², is the number that belongs under Grinold's square root: <b style="display:inline;font-family:inherit;font-size:inherit;letter-spacing:0;text-transform:none;color:inherit">5.57</b>.</figcaption>
+  </figure>
+
+  <div class="tablewrap"><table>
+    <caption>Table 7 — Breadth, both universes, 447 sampled days</caption>
+    <thead><tr><th>Measure</th><th>Large cap</th><th>Small cap</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Signals in catalogue</td><td>31</td><td>31</td></tr>
+      <tr class="hi"><td class="lab">Effective breadth (IC correlation)</td><td>5.57</td><td>6.19</td></tr>
+      <tr><td class="lab">Effective breadth (score correlation)</td><td>8.40</td><td>8.85</td></tr>
+      <tr><td class="lab">The multiplier √breadth</td><td>2.36×</td><td>2.49×</td></tr>
+      <tr><td class="lab">√31 if independent</td><td>5.57×</td><td>5.57×</td></tr>
+      <tr><td class="lab">Top-3 eigenvalue share</td><td>65.5%</td><td>62.6%</td></tr>
+      <tr><td class="lab">Largest cluster at |r| ≥ 0.5</td><td>25 of 31</td><td>24 of 31</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Momentum, reversal, moving averages, RSI, Bollinger position, drawdown depth, close location, volatility and skew are all chained together at |r| ≥ 0.5. Only <span class="mono">negative_skew</span> and <span class="mono">rev_1d</span> stand alone in both universes.</p>
+  <p>Some pairs are near-identities that the family labels concealed. <span class="mono">mom_1m</span> against <span class="mono">rev_21d</span> is <strong>−0.97</strong> — they are the same number with opposite signs, filed under different families. <span class="mono">lowvol_60</span> against <span class="mono">downside_dev</span> is +0.97. The same pairs top the matrix in both universes, which is what a structural result looks like rather than a fitted one.</p>
+
+  <h3><span class="tag">3.3</span>The framework is confirmed; the inputs are empty</h3>
+  <p>Equal-weighting N independent signals should multiply IC by √N_eff. Using the a-priori signs — not the signs that worked, which would be fitting 31 binary parameters to the same decade the answer is read from — it does.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 8 — Combination lift against prediction</caption>
+    <thead><tr><th>Quantity</th><th>Large cap</th><th>Small cap</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Mean individual |IC|</td><td>0.0140</td><td>0.0159</td></tr>
+      <tr><td class="lab">Mean individual IC (signed)</td><td class="neg">−0.0058</td><td class="neg">−0.0039</td></tr>
+      <tr class="hi"><td class="lab">Combined IC</td><td class="neg">−0.0130</td><td class="neg">−0.0145</td></tr>
+      <tr><td class="lab">Achieved lift</td><td>2.22×</td><td>3.71×</td></tr>
+      <tr><td class="lab">Lift predicted from breadth</td><td>2.36×</td><td>2.49×</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Combining lifts the IC by roughly what the eigenvalues predict — not by √31, and not by nothing. <strong>The breadth machinery works as advertised. It amplified a negative number.</strong></p>
+  <p class="mono" style="font-size:13px;color:var(--muted);max-width:64ch">A note on precision: the large-cap agreement (2.22 against 2.36) is closer than this statistic deserves. Its denominator is a mean IC near −0.005, close enough to zero that the ratio is unstable, and the small-cap replication gives 3.71 against 2.49. The directional claim survives; the apparent 6% accuracy was luck.</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/breadth/"><small>← Previous</small>§3 · No signal has an edge</a><a class="next" href="/paper/arithmetic/"><small>Next →</small>§4 · The arithmetic that ends it</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtesting and costs (2/3) — Lab notebook — shrov</title>
+<meta name="description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<meta property="og:title" content="Backtesting and costs (2/3) — Lab notebook — shrov">
+<meta property="og:description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 2 of 7 · page 2 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" aria-current="page" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Backtesting and costs <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/costs/">1</a><a href="/notebook/costs/2/" aria-current="page">2</a><a href="/notebook/costs/3/">3</a></nav><article class="nbody"><h3 id="measured-not-assumed">Measured, not assumed</h3>
+<pre><code class="language-bash">python spreads.py --port 4002 --rounds 3
+</code></pre>
+<p>Samples real quoted bid/ask across the universe and writes <code>data/spreads.json</code>.
+Reads only. Falls back to the delayed tier, which does expose two-sided quotes.</p>
+<p>Measured 2026-09-08, 112 names, 3 rounds, delayed feed:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>half-spread</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>universe median</td>
+<td><strong>1.91 bps</strong></td>
+</tr>
+<tr>
+<td>p25 / p75</td>
+<td>1.12 / 3.12</td>
+</tr>
+<tr>
+<td>min (SPY) / max (DE)</td>
+<td>0.20 / 9.16</td>
+</tr>
+<tr>
+<td><strong>trade-weighted for momentum</strong></td>
+<td><strong>2.40 bps</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The 1.5bps default was too low. Momentum shows no tilt toward wide or tight
+names — its 20 most-traded average 2.04bps against 2.12 for its least-traded —
+so the trade-weighted figure is close to the simple mean of what it touches.</p>
+<p>Three limits on what this proves. These are <strong>quoted</strong> spreads, an upper bound
+on the effective cost since real fills often land inside the quote. They are
+<strong>today's</strong> spreads applied to a nine-year backtest, and spreads have generally
+narrowed, so historical cost was probably higher. And the feed is delayed by
+15-20 minutes, which perturbs a snapshot more than a level.</p>
+<h3 id="cost-sensitivity-without-re-running">Cost sensitivity without re-running</h3>
+<p>Re-running a backtest at a different spread does not measure the spread. One
+different fill changes the position, which changes every later proposal. On
+real data, raising the half-spread from 1.91 to 2.40bps <em>increased</em> the
+measured excess — path divergence, not a cost effect — so the rows of such a
+sweep are not comparable and the sweep answers nothing.</p>
+<p><code>labtrader/costs.py</code> holds the order sequence fixed and charges it differently.
+<code>sensitivity()</code> is anchored so the reference assumption reproduces the realised
+return exactly (verified: +367.94% against a realised +367.90%), and only fills
+with <code>Fill.crossed</code> pay — <strong>70% of momentum's notional crosses, 30% rests.</strong></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>half-spread</th>
+<th>drag/yr</th>
+<th>return</th>
+<th>vs equal-weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.00</td>
+<td>0.00%</td>
+<td>+381.6%</td>
+<td>+57.2%</td>
+</tr>
+<tr>
+<td>1.91 (universe median)</td>
+<td>0.40%</td>
+<td>+364.3%</td>
+<td>+40.0%</td>
+</tr>
+<tr>
+<td><strong>2.40 (measured)</strong></td>
+<td><strong>0.50%</strong></td>
+<td><strong>+359.9%</strong></td>
+<td><strong>+35.6%</strong></td>
+</tr>
+<tr>
+<td>6.00</td>
+<td>1.25%</td>
+<td>+329.1%</td>
+<td>+4.8%</td>
+</tr>
+<tr>
+<td>8.00</td>
+<td>1.66%</td>
+<td>+312.8%</td>
+<td>−11.5%</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>breakeven_bps()</code> gives the number directly: momentum stops beating
+equal-weight at a <strong>6.59bps</strong> half-spread, and SPY at <strong>14.63bps</strong>, against a
+measured 2.40. So the edge survives roughly a 2.7x error in the spread
+estimate.</p>
+<p>That is a real margin, and it does not make the edge significant — the
+information ratio is still 0.14 (t=0.42 over 9.2 years). Cost is no longer the
+reason to doubt it; sample size is.</p>
+<p>On synthetic bars, through-vs-touch moved only <strong>+0.4%</strong> of ~3,000 passive
+orders — much less than the framing "paper trading flatters passive strategies"
+would suggest. It should bite harder on real data, where limits cluster at
+round numbers that get touched exactly and not traded through, but that is
+unmeasured. Treat the conservative default as cheap insurance, not a proven
+correction.</p>
+<p><code>--optimistic</code> relaxes all three. Note that comparing a run against its own
+optimistic twin is confounded: once one fill differs, positions differ and all
+subsequent proposals diverge. To measure the fill model itself, hold the order
+flow fixed and re-simulate it under both.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/costs/"><small>← Previous</small>Backtesting (milestone 4)</a><a class="next" href="/notebook/costs/3/"><small>Next →</small>Scoring</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

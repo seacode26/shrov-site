@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM agents (3/4) — Lab notebook — shrov</title>
+<meta name="description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<meta property="og:title" content="LLM agents (3/4) — Lab notebook — shrov">
+<meta property="og:description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 4 of 7 · page 3 of 4</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" aria-current="page" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">LLM agents <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/agents/">1</a><a href="/notebook/agents/2/">2</a><a href="/notebook/agents/3/" aria-current="page">3</a><a href="/notebook/agents/4/">4</a></nav><article class="nbody"><h2 id="the-veto-agent-labtradervetopy">The veto agent (<code>labtrader/veto.py</code>)</h2>
+<p>Scout as a <em>picker</em> turned out to be momentum wearing a hat — every visible
+pick sat in Momentum's top 20, because four of its five features were momentum
+features. An agent can only express what its inputs allow.</p>
+<p><code>Vetoed</code> wraps any strategy. The strategy proposes; the agent may drop some of
+those buys and may do nothing else — it cannot add a name, resize one, or veto
+a sell.</p>
+<p>Three reasons this is the better experiment:</p>
+<ul>
+<li><strong>Cleanly measurable.</strong> Same strategy, with and without, over identical order
+  flow. <code>test_a_veto_that_never_fires_reproduces_the_strategy_exactly</code> is the
+  control — if the wrapper did anything of its own, no comparison would mean
+  anything.</li>
+<li><strong>Bounded downside.</strong> The worst an over-eager veto can do is leave you in
+  cash. It can never take a position you did not already want.</li>
+<li><strong>Asks something momentum cannot answer.</strong> A cross-sectional rank is blind to
+  regime, so the prompt carries market context — index return, breadth, median
+  volatility — which is the one input a rank does not already contain.</li>
+</ul>
+<p><strong>Fail-open, deliberately.</strong> An outage or a nonsense reply lets everything
+through. That is the opposite of Scout and for the right reason: Scout <em>was</em>
+the strategy, so failing meant doing nothing; a veto is a filter, so failing
+means not filtering. An outage must never be able to stop a book trading.</p>
+<p><strong>Sells are never shown to it</strong>, let alone vetoed. Blocking a de-risking order
+is the one thing a risk check must not do — the same principle as the gate's
+"de-risking is always allowed".</p>
+<h3 id="first-live-call-2026-09-08">First live call, 2026-09-08</h3>
+<p>Vetoed <strong>3 of 20 (15%)</strong> on reasons a cross-sectional rank structurally cannot
+produce: CRM for realised volatility of 87.9% against a 24.2% index median,
+ORCL and TSLA for negative 60d returns despite ranking on 20d — momentum
+picking up a bounce inside a downtrend.</p>
+<p>Cheaper than the picker, too: <strong>$0.0223 a call</strong> against $0.0496, since it
+screens 20 names rather than 112. A full backtest is <strong>$10.30</strong>, weekly running
+<strong>$1.11/yr</strong>.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/agents/2/"><small>← Previous</small>What the API actually costs</a><a class="next" href="/notebook/agents/4/"><small>Next →</small>Result: the veto lost money</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

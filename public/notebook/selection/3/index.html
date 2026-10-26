@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing strategies (3/3) — Lab notebook — shrov</title>
+<meta name="description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<meta property="og:title" content="Choosing strategies (3/3) — Lab notebook — shrov">
+<meta property="og:description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 3 of 7 · page 3 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" aria-current="page" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Choosing strategies <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/selection/">1</a><a href="/notebook/selection/2/">2</a><a href="/notebook/selection/3/" aria-current="page">3</a></nav><article class="nbody"><h3 id="walk-forward-on-112-names">Walk-forward on 112 names</h3>
+<p>Full output in <code>results/</code>. Primary configuration was <strong>pre-registered as
+rolling/return</strong> before running, precisely so the anchored variant could not be
+cherry-picked afterwards.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>rolling (primary)</th>
+<th>anchored (check)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>walk-forward selection</td>
+<td><strong>+100.2%</strong></td>
+<td>+283.3%</td>
+</tr>
+<tr>
+<td>average candidate</td>
+<td><strong>+114.5%</strong></td>
+<td>+117.6%</td>
+</tr>
+<tr>
+<td>always mom-k20-20d</td>
+<td>+287.0%</td>
+<td>+298.0%</td>
+</tr>
+<tr>
+<td>always mom-k20-60d</td>
+<td>+282.3%</td>
+<td>+303.5%</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+185.4%</td>
+<td>+185.4%</td>
+</tr>
+<tr>
+<td>perfect hindsight</td>
+<td>+605.0%</td>
+<td>+638.9%</td>
+</tr>
+<tr>
+<td>selection hit rate</td>
+<td><strong>36%</strong></td>
+<td>71%</td>
+</tr>
+<tr>
+<td>rank correlation</td>
+<td>+0.11</td>
+<td>+0.39</td>
+</tr>
+<tr>
+<td>churn</td>
+<td>54%</td>
+<td>15%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Primary result: selection failed again, harder.</strong> At 36% it did worse than a
+coin flip and worse than simply averaging every candidate. Committing to one
+momentum variant beat adaptive selection by 187 points. This is the second
+independent reproduction, now on a universe five times larger.</p>
+<p><strong>In 0 of 14 folds did selection pick the actual best candidate.</strong> In the last
+three folds it had rotated into <code>trend-monthly</code> — which had won folds 8, 9 and
+10 — exactly as momentum won the next three by +13.9%, +12.1% and +24.8%. Plain
+performance chasing.</p>
+<p><strong>Anchored disagrees, and there is a mechanism.</strong> Training on all history rather
+than a rolling two years produces a more stable ranking (churn 15% vs 54%) and
+never chases into trend-monthly. That is a plausible hypothesis, <em>not</em> a result:
+p=0.09 on its own, ~0.17 across two configurations, and adopting it because it
+scored better is the cherry-pick this section exists to prevent.</p>
+<p><strong>The robust finding is about momentum, not about selecting.</strong> A momentum
+variant was the best candidate in <strong>10 of 14 out-of-sample folds</strong> (p=0.004
+against a 2-in-6 null), in both configurations, at both a 20-day and a 60-day
+lookback. Two different parameterisations landing within 5 points of each other
+(+287% / +282%) is weak evidence the effect is not a fitted artifact.</p>
+<p>Caveat that walk-forward does not address: momentum turns over ~29x NAV/year and
+<code>ExecutionModel</code> charges no spread on limit orders. At that turnover a 1-2bps
+effective spread is roughly 0.5-0.9%/yr compounding against these numbers.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/selection/2/"><small>← Previous</small>Overnight vs intraday</a><a class="next" href="/notebook/agents/"><small>Next →</small>LLM agents: Scout (milestone 5)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

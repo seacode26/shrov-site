@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §3 · No signal has an edge</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §3 · No signal has an edge">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+<script src="/paper/figures.js" defer></script>
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 5 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" aria-current="page" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="breadth">
+  <div class="sechead"><div class="secnum">§ 3</div><h2 class="title">The central result: 31 signals are 6 bets</h2></div>
+
+  <p>What survived the neutral construction is the other half of Grinold's fundamental law. <span class="mono">IR = IC × √breadth</span> pays the square root only if the bets are <em>independent</em>. Thirty-one signals that all say "buy what went up" are one bet with thirty spare copies.</p>
+
+  <p>We built 31 signals across six declared families — momentum, reversal, volatility, liquidity, technical, shape — from the published anomaly literature. Each states the prior fixing its sign <em>before</em> seeing data, because choosing signs afterwards is 31 free parameters and would fit anything. Two pairs are deliberate near-duplicates, planted as positive controls for the correlation matrix.</p>
+
+  <div class="note">
+    <div class="h">Controls before conclusions</div>
+    <p>The instrument was tested against a signal that <em>is</em> the forward return (must measure IC ≈ 1) and against pure noise (must measure IC ≈ 0 and effective breadth ≈ the signal count). An instrument that cannot see a perfect edge cannot be trusted when it reports none, and one that finds structure in noise would flatter every result in this paper.</p>
+  </div>
+
+  <h3><span class="tag">3.1</span>No individual signal has a detectable edge</h3>
+
+  <figure>
+    <div class="chart" id="fig-t"></div>
+    <figcaption><b>Figure 1 — Rank IC t-statistics, 31 signals, both universes</b>
+    Each row is one signal. Filled marks are 112 large caps; open marks are 110 small caps. The dashed lines are |t| = 2. Nothing crosses in large caps; one signal does in small caps. t-statistics are deflated by √(horizon/stride) to account for overlapping 21-session forward windows — without that correction they would be twice as large, which is the difference between "nothing here" and two apparent discoveries.</figcaption>
+  </figure>
+
+  <div class="strip">
+    <div><dt>Signals at |t| ≥ 2, large</dt><dd>0<small>1.6 expected by chance across 31 tests</small></dd></div>
+    <div><dt>Signals at |t| ≥ 2, small</dt><dd>1<small><span class="mono">illiquidity</span>, t = 2.06</small></dd></div>
+    <div><dt>Signs matching prior</dt><dd>13 / 31<small>binomial p = 0.24 — a coin flip</small></dd></div>
+  </div>
+
+  <p>The one signal that crosses is <span class="mono">illiquidity</span> in small caps. Against 1.6 expected by chance, one hit is not a discovery — and it is the same trade §2.5 already ruled out, since the measured spread on that universe is 14.27 bps against an edge of about 3 bps. <strong>The single signal that shows up is the one that cannot be harvested.</strong></p>
+
+  </section></div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/turnover/"><small>← Previous</small>§2 · Turnover, replication, market-neutral</a><a class="next" href="/paper/clusters/"><small>Next →</small>§3 · Thirty-one signals are six bets</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

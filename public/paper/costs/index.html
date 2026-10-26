@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §2 · Costs and capacity</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §2 · Costs and capacity">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 3 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" aria-current="page" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section><div class="sechead"><div class="secnum">§ 2</div><h2 class="title">Nine experiments, continued</h2></div>
+<h3><span class="tag">2.4 &middot; Transaction costs</span>2.40 bps large cap, 14.27 bps small cap</h3>
+  <p>Quoted half-spreads, 112 names, three rounds, on the live feed. Median 1.91 bps; trade-weighted for what momentum actually buys, 2.40. The 1.5 bps default in the execution model was too low.</p>
+  <p>Three limits on what this proves, all stated because they cut the same way: these are <em>quoted</em> spreads, an upper bound on effective cost; they are <em>today's</em> spreads applied to a nine-year history, and spreads have generally narrowed; and the feed is delayed 15–20 minutes.</p>
+
+  <h3><span class="tag">2.5 &middot; Capacity</span>The self-defeating argument</h3>
+  <p>The standard defence of a small account is that its edge lives where institutions cannot trade. Every failure above happened in mega-caps, so the argument had never been tested. We ran it on 110 small and mid caps at <strong>23× lower dollar volume</strong> (median $39.8M/day against $919M).</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 3 — Edge over equal-weighting the same universe</caption>
+    <thead><tr><th>Universe</th><th>Momentum</th><th>Equal-weight</th><th>Edge</th><th>Max DD</th><th>Sharpe</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Large cap (111)</td><td>+361.7%</td><td>+324.3%</td><td>+37.4pp</td><td>27.5%</td><td>1.04</td></tr>
+      <tr><td class="lab">Small cap (109)</td><td>+374.1%</td><td>+360.9%</td><td class="neg">+13.3pp</td><td>44.5%</td><td>0.82</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>The edge is <em>smaller</em>, drawdown far worse, Sharpe lower. And the costs settle it:</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 4 — Breakeven half-spread against measured half-spread</caption>
+    <thead><tr><th>Universe</th><th>Breakeven</th><th>Measured (trade-weighted)</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Large cap</td><td>6.76 bps</td><td>2.40 bps</td><td>clears</td></tr>
+      <tr class="hi"><td class="lab">Small cap</td><td>4.08 bps</td><td class="neg">14.27 bps</td><td class="neg">3.5× over</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="pull">Institutions avoid these names <em>because the trading costs are prohibitive</em>. Those same costs apply to a $100k account. The friction that protects an anomaly from arbitrage also consumes it for you.</p>
+
+  <p>Applying the measured spread, the small-cap edge of +13.3 points becomes <strong>−73.5%</strong>.</p>
+
+  </section></div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/agents/"><small>← Previous</small>§2 · Agents and strategy selection</a><a class="next" href="/paper/turnover/"><small>Next →</small>§2 · Turnover, replication, market-neutral</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

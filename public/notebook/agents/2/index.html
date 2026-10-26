@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM agents (2/4) — Lab notebook — shrov</title>
+<meta name="description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<meta property="og:title" content="LLM agents (2/4) — Lab notebook — shrov">
+<meta property="og:description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 4 of 7 · page 2 of 4</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" aria-current="page" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">LLM agents <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/agents/">1</a><a href="/notebook/agents/2/" aria-current="page">2</a><a href="/notebook/agents/3/">3</a><a href="/notebook/agents/4/">4</a></nav><article class="nbody"><h3 id="what-the-api-actually-costs">What the API actually costs</h3>
+<p>Measured prompt: 1,559 input tokens for the 112-name table. Output is the
+unknown — thinking bills as output and cannot be predicted from the prompt,
+so <code>AnthropicClient.usage()</code> records it and turns the estimate into a
+measurement after the first real call. Watch <code>output_per_input</code>: above ~2,
+thinking dominates the bill and <code>effort</code> is the lever.</p>
+<p><strong>Measured, 2026-09-08, one real call at <code>effort=medium</code>:</strong> 4,383 input and
+1,108 output tokens, <strong>$0.0496 per call</strong>. That makes a full nine-year backtest
+<strong>$22.92</strong> and a year of weekly running <strong>$2.48</strong>.</p>
+<p>Two corrections to the estimates that preceded it. Input was <strong>2.8x higher</strong>
+than a chars/4 heuristic predicted — the schema is billed too, and a dense
+numeric table tokenises badly. Output landed at the <em>low</em> end, so
+<code>output_per_input</code> is <strong>0.25</strong>: thinking does not dominate this call, and
+<code>effort</code> is therefore not the cost lever it would be on a harder task. The two
+errors happened to cancel.</p>
+<p><strong>Running it is nearly free.</strong> Scout rebalances weekly — 50 calls a year:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>cadence</th>
+<th>calls/yr</th>
+<th>@1k out</th>
+<th>@2k out</th>
+<th>@4k out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>weekly (Scout today)</td>
+<td>50</td>
+<td>$1.64</td>
+<td>$2.89</td>
+<td>$5.39</td>
+</tr>
+<tr>
+<td>daily</td>
+<td>252</td>
+<td>$8.26</td>
+<td>$14.56</td>
+<td>$27.16</td>
+</tr>
+<tr>
+<td>three agents mixed</td>
+<td>352</td>
+<td>—</td>
+<td>$20.34</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Developing it is where the money goes.</strong> One full nine-year backtest is 462
+calls ≈ <strong>$27</strong>. The cache keys on system + user + schema, so <em>any</em> prompt edit
+re-pays the whole thing:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>iterations</th>
+<th>on full history</th>
+<th>on a 1-year window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>$134</td>
+<td>$14</td>
+</tr>
+<tr>
+<td>15</td>
+<td>$401</td>
+<td>$43</td>
+</tr>
+<tr>
+<td>30</td>
+<td>$801</td>
+<td>$87</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Iterate on a one-year window, then run full history once the prompt is
+settled.</strong> That single habit is worth ~90% of the development bill. <code>CallBudget</code>
+enforces the ceiling in code.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/agents/"><small>← Previous</small>Scout (milestone 5)</a><a class="next" href="/notebook/agents/3/"><small>Next →</small>The veto agent (labtrader/veto.py)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

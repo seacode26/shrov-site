@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §2 · Agents and strategy selection</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §2 · Agents and strategy selection">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 2 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" aria-current="page" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="results">
+  <div class="sechead"><div class="secnum">§ 2</div><h2 class="title">Nine experiments</h2></div>
+
+  <p>Each was run because the previous one left a specific objection standing. They are reported in the order they were run, including the ones that failed for reasons we had not anticipated.</p>
+
+  <h3><span class="tag">2.1 &middot; LLM as picker</span>The agent was momentum wearing a hat</h3>
+  <p>The first agent, <em>Scout</em>, saw price-derived features for the whole universe and returned names to hold. Its prompt deliberately carried returns and volatility only — no sector, no market capitalisation, no company names — so that any drift toward mega-caps would be attributable to the model's priors rather than to the prompt. A test asserts none of those fields leak into the rendered table.</p>
+  <p>It did not need a full backtest to fail. Every visible pick sat inside the momentum strategy's own top 20, because four of its five inputs were momentum features. <strong>An agent can only express what its inputs allow.</strong> This is a design result, not a performance result, and it is the reason the second design exists.</p>
+
+  <h3><span class="tag">2.2 &middot; LLM as veto</span>−111.9 points, and it removed the better half</h3>
+  <p>The second design wraps any strategy: the strategy proposes, the agent may drop some buys, and it may do nothing else. It cannot add a name, resize one, or veto a sell. This is cleanly measurable (identical order flow with and without), has bounded downside (the worst it can do is leave you in cash), and asks something a cross-sectional rank structurally cannot answer — its prompt carries market context: index return, breadth, median volatility.</p>
+  <p>463 rebalances, zero model failures, $9.48 of API spend.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 1 — Veto A/B, identical order flow, 2016–2026</caption>
+    <thead><tr><th>Book</th><th>Return</th><th>Max DD</th><th>Sharpe</th><th>Turnover</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Momentum</td><td>+361.7%</td><td>27.5%</td><td>1.04</td><td>29.8×</td></tr>
+      <tr class="hi"><td class="lab">Momentum + LLM veto</td><td class="neg">+249.8%</td><td>24.4%</td><td>0.99</td><td>29.3×</td></tr>
+      <tr><td class="lab">Buy-and-hold SPY</td><td>+262.7%</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td class="lab">Equal-weight, same 111 names</td><td>+324.3%</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Two diagnostics say why, and neither is "the model was unlucky." <strong>It vetoed the wrong names:</strong> over the following five sessions the vetoed candidates returned +0.633% against +0.343% for the kept ones — it systematically removed the better half (t = +1.38, not significant, but pointing the wrong way). <strong>It never adapted:</strong> the veto rate sat between 16.7% and 21.2% in every single year, with 2022 indistinguishable from 2021. Sold as regime awareness, delivered as a flat ~19% haircut that a rule could apply for free.</p>
+
+  <h3><span class="tag">2.3 &middot; Adaptive selection</span>36% hit rate, reproduced on a five-times-larger universe</h3>
+  <p>Choosing among strategies on a training window and measuring on the next one. Fourteen folds, six candidates, primary configuration pre-registered as rolling/return before running.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 2 — Walk-forward selection, 112 names, 14 folds</caption>
+    <thead><tr><th>Outcome</th><th>Rolling (primary)</th><th>Anchored (check)</th></tr></thead>
+    <tbody>
+      <tr class="hi"><td class="lab">Walk-forward selection</td><td class="neg">+100.2%</td><td>+283.3%</td></tr>
+      <tr><td class="lab">Average of all candidates</td><td>+114.5%</td><td>+117.6%</td></tr>
+      <tr><td class="lab">Commit to one momentum variant</td><td>+287.0%</td><td>+298.0%</td></tr>
+      <tr><td class="lab">Buy-and-hold SPY</td><td>+185.4%</td><td>+185.4%</td></tr>
+      <tr><td class="lab">Selection hit rate</td><td class="neg">36%</td><td>71%</td></tr>
+      <tr><td class="lab">In-sample / out-of-sample rank corr.</td><td>+0.11</td><td>+0.39</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Selection did worse than a coin flip and worse than averaging every candidate. In <strong>0 of 14 folds</strong> did it pick the actual best one; in the last three it had rotated into the strategy that won folds 8–10, exactly as momentum won the next three. That is performance chasing with extra steps.</p>
+  <p>The anchored column disagrees and there is a mechanism for it — training on all history produces a more stable ranking (churn 15% vs 54%). It is reported as a hypothesis, not a result: p = 0.09 alone, ≈0.17 across two configurations, and adopting it <em>because</em> it scored better is precisely the error this design exists to prevent.</p>
+
+  </section></div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/harness/"><small>← Previous</small>§1 · Why it needed a harness</a><a class="next" href="/paper/costs/"><small>Next →</small>§2 · Costs and capacity</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

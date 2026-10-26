@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market-neutral — Lab notebook — shrov</title>
+<meta name="description" content="Long/short construction, two bugs it exposed, and negative alpha.">
+<meta property="og:title" content="Market-neutral — Lab notebook — shrov">
+<meta property="og:description" content="Long/short construction, two bugs it exposed, and negative alpha.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 6 of 7</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" aria-current="page" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>Market-neutral</h1><p class="deck">Long/short construction, two bugs it exposed, and negative alpha.</p></header><article class="nbody"><h2 id="market-neutral-construction-labtraderneutralpy">Market-neutral construction (<code>labtrader/neutral.py</code>)</h2>
+<p>Long the top of a cross-sectional ranking, short the bottom, equal dollars each
+side. The signal is a parameter, not baked in — because the argument for this
+is Grinold's law, <code>IR = IC × √breadth</code>, and our momentum implied an IC of
+<strong>0.020</strong> (a perfectly normal quant IC) against a breadth of ~50. The signal was
+never the problem. Fifty uncorrelated signals at that same IC would give IR 1.0.</p>
+<p><strong>Two bugs this exposed, both real.</strong></p>
+<p><em>The book did not stay neutral.</em> Dollar-neutral at entry decays asymmetrically:
+a losing short <strong>grows</strong> as a share of the book while a losing long shrinks. On
+a 21-session calendar this drifted to <strong>$103k net short on $100k of capital</strong> and
+took NAV to <strong>−$12,091</strong>. Selection now stays on the slow calendar (turnover is
+expensive) while the hedge is trued up whenever net exposure exceeds a
+<code>drift_band</code> of NAV. Real neutral books rebalance the hedge continuously for
+exactly this reason.</p>
+<p><em><code>SimPortfolio</code> had no margin logic.</em> A long-only book cannot lose more than it
+invests, so this never mattered. With shorts it matters enormously — simulating
+losses no broker would have permitted produces numbers that are not merely
+wrong but unfalsifiable, since no real path reaches them. <code>margin_call()</code> now
+liquidates when equity falls below 25% of gross, and <code>ReplayResult.margin_calls</code>
+records it. <strong>Any non-zero count means the run hit a wall and everything after
+it is a different experiment.</strong></p>
+<h3 id="result">Result</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>book</th>
+<th>return</th>
+<th>vol</th>
+<th>Sharpe</th>
+<th>beta</th>
+<th>maxDD</th>
+<th>turn</th>
+<th>MC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>long-only momentum</td>
+<td>+519.0%</td>
+<td>22.3%</td>
+<td>1.04</td>
+<td>0.96</td>
+<td>30.1%</td>
+<td>3.7x</td>
+<td>0</td>
+</tr>
+<tr>
+<td>L/S momentum 12-1</td>
+<td>−49.9%</td>
+<td>22.1%</td>
+<td>−0.25</td>
+<td>−0.14</td>
+<td>55.9%</td>
+<td>8.0x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>L/S reversal 5d</td>
+<td>+0.9%</td>
+<td>17.1%</td>
+<td>0.09</td>
+<td>0.08</td>
+<td>32.0%</td>
+<td>31.3x</td>
+<td>0</td>
+</tr>
+<tr>
+<td>L/S low volatility</td>
+<td>−45.2%</td>
+<td>17.3%</td>
+<td>−0.31</td>
+<td>−0.31</td>
+<td>51.2%</td>
+<td>5.2x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>L/S combined</td>
+<td>−40.9%</td>
+<td>20.1%</td>
+<td>−0.20</td>
+<td>0.05</td>
+<td>55.8%</td>
+<td>6.3x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+242.7%</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Beta collapsed from 0.96 to roughly zero — the construction works.</strong> The
+variance reduction did not arrive with it: volatility stayed near 20% rather
+than falling to the ~6% the argument assumed, because the short leg brings its
+own risk rather than merely cancelling the long leg's.</p>
+<p>And the alpha is negative. Shorting the bottom of a momentum ranking in a
+decade-long bull market loses money, which is not a subtle finding. Three of
+five books hit margin calls.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/capacity/2/"><small>← Previous</small>Small caps and turnover: Low turnover: the cost problem is solved, the signal problem replaces it</a><a class="next" href="/notebook/breadth/"><small>Next →</small>Breadth: Breadth: are 31 signals actually 31 signals? (labtrader/signals.py, labtrader/factors.py)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

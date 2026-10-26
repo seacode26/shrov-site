@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breadth (3/3) — Lab notebook — shrov</title>
+<meta name="description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<meta property="og:title" content="Breadth (3/3) — Lab notebook — shrov">
+<meta property="og:description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 7 of 7 · page 3 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" aria-current="page" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Breadth <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/breadth/">1</a><a href="/notebook/breadth/2/">2</a><a href="/notebook/breadth/3/" aria-current="page">3</a></nav><article class="nbody"><h3 id="the-theory-was-confirmed-the-inputs-are-empty">The theory was confirmed; the inputs are empty</h3>
+<p>Equal-weighting N independent signals should multiply IC by √N_eff. It did:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>combined IC</td>
+<td>−0.0130 (t = −0.55)</td>
+</tr>
+<tr>
+<td>lift over mean signed IC</td>
+<td><strong>2.22×</strong></td>
+</tr>
+<tr>
+<td>lift predicted from IC breadth 5.57</td>
+<td><strong>2.36×</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The breadth machinery works about as advertised — it just amplified a
+negative number.</strong></p>
+<p>How well it works is less precise than that 6% gap suggests, and the small-cap
+replication below is what shows it: the denominator is a mean IC of −0.006,
+close enough to zero that the ratio is unstable. Across both universes the
+combination lifts by 2.2–3.7× against a prediction of 2.4–2.5×. That confirms
+the framework <em>directionally</em> — combining is worth roughly what the eigenvalues
+say, not √31 and not nothing — but the large-cap agreement to within 6% was
+luck, not precision.</p>
+<p>The arithmetic that follows is unforgiving. At the measured IC of 0.014, a
+usable IR needs about 1,300 independent bets a year for IR 0.5, or 5,100 for
+IR 1.0. What 31 signals actually supply:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>bets/yr</th>
+<th>IR</th>
+<th>years to t=2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.57 breadth × monthly</td>
+<td>67</td>
+<td>0.11</td>
+<td>305</td>
+</tr>
+<tr>
+<td>5.57 breadth × weekly</td>
+<td>290</td>
+<td>0.24</td>
+<td>70</td>
+</tr>
+<tr>
+<td>8.40 breadth × weekly</td>
+<td>437</td>
+<td>0.29</td>
+<td>47</td>
+</tr>
+</tbody>
+</table></div>
+<p>And weekly rebalancing was already ruled out by the turnover work — costs eat
+it. <strong>Adding more price-derived signals does not fix this.</strong> Going from 3
+signals to 31 bought effective breadth of 5.57; the marginal signal is adding
+roughly 0.2 of a bet, and the shortfall is two orders of magnitude.</p>
+<p>Anything that changes the answer has to be <strong>genuinely orthogonal information</strong>
+— not another transformation of the same OHLCV series that every one of these
+31 signals is computed from. That is the only remaining place an LLM could
+plausibly help: as a source of <em>new</em> features from text, not as a decision
+maker over the same prices.</p>
+<h3 id="small-caps-replicate-it">Small caps replicate it</h3>
+<p>Same 31 signals, 110 small caps, same window — as a check that this is not a
+large-cap artifact. It is not.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large</th>
+<th>small</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>effective breadth (IC)</td>
+<td>5.57</td>
+<td><strong>6.19</strong></td>
+</tr>
+<tr>
+<td>effective breadth (score)</td>
+<td>8.40</td>
+<td><strong>8.85</strong></td>
+</tr>
+<tr>
+<td>largest cluster at |r| ≥ 0.5</td>
+<td>25 of 31</td>
+<td><strong>24 of 31</strong></td>
+</tr>
+<tr>
+<td>signals at |t| ≥ 2</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>mean individual IC (signed)</td>
+<td>−0.0058</td>
+<td>−0.0039</td>
+</tr>
+<tr>
+<td>combined IC</td>
+<td>−0.0130</td>
+<td>−0.0145</td>
+</tr>
+<tr>
+<td>combination lift</td>
+<td>2.22×</td>
+<td>3.71×</td>
+</tr>
+<tr>
+<td>lift predicted</td>
+<td>2.36×</td>
+<td>2.49×</td>
+</tr>
+</tbody>
+</table></div>
+<p>The same pairs top the matrix in both universes — <code>mom_1m</code>/<code>rev_21d</code> at −0.97,
+<code>lowvol_60</code>/<code>downside_dev</code> at +0.97 — which is what a structural result looks
+like rather than a fitted one.</p>
+<p>The one signal reaching |t| ≥ 2 is <strong><code>illiquidity</code> at +2.06</strong> (IC +0.0289).
+Against 1.6 expected by chance across 31 tests, one hit is not a discovery. And
+it is the same self-defeating trade the capacity work already ran into: the
+measured trade-weighted spread on this universe is <strong>14.27 bps</strong>, several times
+the edge on offer. The one signal that shows up is the one we cannot harvest.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/breadth/2/"><small>← Previous</small>Result — 112 large caps, 447 sampled days, 2016–2026</a><span></span></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>
