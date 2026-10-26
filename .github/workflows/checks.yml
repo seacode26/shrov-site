@@ -13,7 +13,7 @@ jobs:
           python-version: "3.12"
       - run: pip install markdown==3.7
       - run: python tools/build.py
-      - run: git diff --exit-code -- public/ || (echo "public/ is stale: run python tools/build.py and commit" && exit 1)
+      - run: git diff --exit-code -- public/ || (echo 'public/ is stale - run python tools/build.py and commit' && exit 1)
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
