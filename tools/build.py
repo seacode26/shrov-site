@@ -311,6 +311,18 @@ def fix_deep_links(anchors):
         f.write_text(re.sub(r'href="/notebook/[^"#]*#([^"]+)"', repl, s), encoding="utf-8")
 
 
+SITE = "https://www.shrov.com"
+
+
+def write_sitemap():
+    """sitemap.xml for search engines: every page (index.html), no dates so the build stays reproducible."""
+    urls = sorted(SITE + "/" + str(p.parent.relative_to(PUBLIC)).replace(".", "").strip("/") for p in PUBLIC.rglob("index.html"))
+    urls = [u if u.endswith("/") else u + "/" for u in urls]
+    body = "".join(f"  <url><loc>{u}</loc></url>\n" for u in urls)
+    (PUBLIC / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + body + "</urlset>\n", encoding="utf-8")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lab", help="path to the ibkr-lab checkout to refresh content/ from")
@@ -319,6 +331,7 @@ def main():
         refresh(a.lab)
     build_paper()
     fix_deep_links(build_notebook())
+    write_sitemap()
     for p in PUBLIC.rglob("*.html"):
         check_clean(p.read_text(encoding="utf-8"), str(p.relative_to(ROOT)))
     print("built:", ", ".join(str(p.relative_to(ROOT)) for p in sorted(PUBLIC.rglob("*.html"))))
