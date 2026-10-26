@@ -1,0 +1,1402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab notebook — shrov</title>
+<meta name="description" content="The working notebook behind Thirty-One Signals, Six Bets: every experiment, number and correction, in the order it happened.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a></span></nav>
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">Lab notebook &middot; Sep 2026</p>
+  <h1>The workings</h1>
+  <p class="deck">The running record the paper was drawn from — each experiment, the number it produced, and the corrections, in the order they happened. Read <a href="/paper/">the paper</a> for the argument; read this for the arithmetic.</p>
+</header>
+<div class="note"><p>Names in <code>code</code> refer to the lab's software — a paper-trading harness against an Interactive Brokers <em>paper</em> account and a replay backtester. The code is not published; this notebook records what it measured. All capital is simulated.</p></div>
+<div class="nb">
+<nav class="toc" aria-label="Contents"><p class="h">Contents</p>
+<ul>
+<li><a href="#the-one-design-decision">The one design decision</a></li>
+<li><a href="#first-connection-run-preflight">First connection: run preflight</a></li>
+<li><a href="#paper-only-enforcement">Paper-only enforcement</a></li>
+<li><a href="#what-the-sandbox-lies-about">What the sandbox lies about</a></li>
+<li><a href="#risk-limits">Risk limits</a></li>
+<li><a href="#backtesting-milestone-4">Backtesting (milestone 4)</a></li>
+<li><a href="#alerting">Alerting</a></li>
+<li><a href="#walk-forward-the-thing-that-makes-comparisons-mean-anything">Walk-forward (the thing that makes comparisons mean anything)</a></li>
+<li><a href="#overnight-vs-intraday">Overnight vs intraday</a></li>
+<li><a href="#scout-milestone-5">Scout (milestone 5)</a></li>
+<li><a href="#the-veto-agent-labtradervetopy">The veto agent (labtrader/veto.py)</a></li>
+<li><a href="#the-small-cap-test">The small-cap test</a></li>
+<li><a href="#low-turnover-the-cost-problem-is-solved-the-signal-problem-replaces-it">Low turnover: the cost problem is solved, the signal problem replaces it</a></li>
+<li><a href="#market-neutral-construction-labtraderneutralpy">Market-neutral construction (labtrader/neutral.py)</a></li>
+<li><a href="#breadth-are-31-signals-actually-31-signals-labtradersignalspy-labtraderfactorspy">Breadth: are 31 signals actually 31 signals? (labtrader/signals.py, labtrader/factors.py)</a></li>
+</ul>
+</nav>
+
+<article>
+<h2 id="the-one-design-decision">The one design decision</h2>
+<p>The LLM never touches the order API.</p>
+<pre><code>market data ──&gt; Context Builder (deterministic)
+                     │
+                     v
+             Agent (LLM) ──&gt; Proposal
+                     │
+                     v
+             Risk Gate (pure Python) ──reject──&gt; journal + reason
+                     │ accept
+                     v
+             Broker (ib_async) ──&gt; IBKR paper
+</code></pre>
+<p>A proposal is journalled <em>before</em> the gate runs, so agent judgment is scored
+separately from execution luck. A rejected proposal that would have been a
+winner is a finding about the limits, not about the agent.</p>
+<h2 id="first-connection-run-preflight">First connection: run preflight</h2>
+<pre><code class="language-bash">python preflight.py --port 4002
+</code></pre>
+<p>Checks connection, paper-account prefix, NAV, contract lookup, whether quotes
+come back live or delayed (i.e. whether subscription sharing actually took
+effect), historical-data permission, and the volume-units question below.
+Places no orders. Each check catches its own failure so one break doesn't mask
+the rest.</p>
+<h3 id="market-data-on-a-paper-account">Market data on a paper account</h3>
+<p>Sharing is opt-in: <strong>Client Portal → Settings → Account Settings → Paper
+Trading Account → Yes</strong>, then choose which live username's subscriptions to
+share. You cannot consume the shared data on live and paper simultaneously.</p>
+<p><code>reqHistoricalData</code> requires a Level 1 streaming subscription — delayed mode
+does <strong>not</strong> bypass it, and without one you get error 162. IBKR's free
+<strong>US Real-Time Non-Consolidated Streaming Quotes</strong> (Cboe One + IEX) satisfies
+this, but it is not the NBBO, and the SEC Vendor Display Rule means TWS won't
+show it in the order ticket without a paid consolidated subscription.</p>
+<h3 id="the-volume-units-question-unresolved">The volume-units question — unresolved</h3>
+<p><code>ExecutionModel.max_participation</code> caps orders at a share of bar volume, which
+assumes that number is consolidated share volume. Two things can make it wrong,
+neither of which announces itself:</p>
+<ul>
+<li>IBKR reports historical stock volume in <strong>round lots</strong> (×100), not shares.</li>
+<li>A non-consolidated feed may carry <strong>venue-limited</strong> volume (~10× low).</li>
+</ul>
+<p>Either would make the model far more restrictive than intended — 100× or 10×.
+<code>preflight.py</code> pulls a liquid name and reports which case it's looking at.
+Settle this before running any strategy whose results you intend to believe.</p>
+<h2 id="paper-only-enforcement">Paper-only enforcement</h2>
+<p>Two real checks and one weak one, because this is the only bug here that costs
+money:</p>
+<ul>
+<li><code>IBKRPaper.connect</code> drops the connection unless every managed account starts
+  with <code>DU</code>/<code>DF</code>. <strong>This is the load-bearing check.</strong></li>
+<li>The gate rejects <code>NOT_PAPER_ACCOUNT</code> on a separate code path, so a caller
+  that bypasses the broker wrapper is still stopped.</li>
+<li><code>IBKRPaper.__init__</code> refuses any port outside <code>{7497, 4002}</code>. Weaker than it
+  looks, and originally overstated here: <strong>the port proves nothing about the
+  session</strong>. Gateway's API port is a config value, and a Gateway logged into a
+  <em>live</em> account will happily serve it on 4002. Observed in practice on
+  2026-09-08, where port 4002 returned live accounts.
+  The port check only catches typing the live port; the account prefix is what
+  actually protects you.</li>
+</ul>
+<h2 id="what-the-sandbox-lies-about">What the sandbox lies about</h2>
+<p>Paper is a correctness harness, not a performance oracle:</p>
+<ul>
+<li><strong>Fills are optimistic.</strong> Simulated against the NBBO with no queue position,
+  so any passive/limit strategy will look better than it is.</li>
+<li><strong>No market impact, ever.</strong> Size is free.</li>
+<li><strong>Delayed data by default.</strong> <code>quote()</code> returns a <code>delayed</code> flag — if it is
+  <code>True</code>, fills against those prices are not evidence of anything.</li>
+<li>Paper accounts reset and occasionally drift from what your journal thinks.</li>
+</ul>
+<p>Performance claims come from replay backtests over journalled snapshots with an
+explicit slippage model (milestone 4), not from these fills.</p>
+<h2 id="risk-limits">Risk limits</h2>
+<p>Defaults in <code>labtrader/config.py</code>. Limits live in code, not in prompts — a
+prompt is a suggestion, this is a constraint.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max single position</td>
+<td>5% NAV</td>
+</tr>
+<tr>
+<td>Max sector</td>
+<td>25% NAV</td>
+</tr>
+<tr>
+<td>Max gross exposure</td>
+<td>100% (no margin)</td>
+</tr>
+<tr>
+<td>Orders per agent per day</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Notional per agent per day</td>
+<td>$50,000</td>
+</tr>
+<tr>
+<td>Drawdown halt</td>
+<td>15%, manual re-arm</td>
+</tr>
+<tr>
+<td>Limit price deviation</td>
+<td>10% from reference</td>
+</tr>
+<tr>
+<td>Shorting</td>
+<td>disabled</td>
+</tr>
+<tr>
+<td>Session</td>
+<td>RTH only</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>De-risking is always allowed.</strong> A limit only bites if the trade makes an
+already-bad number worse — otherwise a risk-reducing agent gets locked out
+exactly when it is needed. See <code>TestDeRiskingAlwaysAllowed</code>.</p>
+<p>The drawdown halt is the deliberate exception: it blocks selling too, so
+flattening after a 15% loss is a human decision.</p>
+<h2 id="backtesting-milestone-4">Backtesting (milestone 4)</h2>
+<pre><code class="language-bash">python backtest.py
+</code></pre>
+<p>Runs on a synthetic random walk, so it works with no data at all. Those numbers
+are meaningless by construction — the walk has no structure to find.</p>
+<p>For real bars without waiting on IBKR entitlements (prices back-adjusted for
+splits and dividends; volume left raw, see the module docstring):</p>
+<pre><code class="language-bash">python fetch_yahoo.py --years 2 --out data/bars.csv
+</code></pre>
+<p>Once IBKR entitlements exist, that is the source of record:</p>
+<pre><code class="language-bash">python fetch_bars.py --port 4002 --years 3 --out data/bars.csv
+</code></pre>
+<pre><code class="language-bash">python backtest.py --bars data/bars.csv
+</code></pre>
+<h3 id="timing-convention">Timing convention</h3>
+<blockquote>
+<p>A strategy decides at the close of day <em>t</em> using data through day <em>t</em>, and
+its orders execute against day <em>t+1</em>'s bar.</p>
+</blockquote>
+<p>The first half is enforced structurally: <code>MarketView</code> is pinned to one date and
+has no method that returns a later bar, so look-ahead is not something to
+remember to avoid. <code>test_no_attribute_exposes_the_full_series</code> fails if a
+refactor ever hands a strategy the whole series.</p>
+<p>The second half falls out of the engine: accepted proposals sit in <code>pending</code>
+and are only touched on the next iteration. Unfilled day orders expire, which
+matches the <code>tif="DAY"</code> the live broker sends.</p>
+<h3 id="the-replay-uses-the-same-gate">The replay uses the <em>same</em> gate</h3>
+<p><code>replay()</code> calls the same <code>evaluate()</code> as the live path, with a
+<code>DU-REPLAY</code> account id to satisfy the paper-prefix check. A backtest that gates
+differently from production is testing something other than what will run.</p>
+<h3 id="execution-model">Execution model</h3>
+<p>Three assumptions, all configurable, ordered by how much they were measured to
+matter:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Assumption</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>half_spread_bps</code></td>
+<td>1.5bps</td>
+<td>charged whenever an order <strong>takes</strong> liquidity</td>
+</tr>
+<tr>
+<td><code>max_participation</code></td>
+<td>10% of bar volume</td>
+<td>large orders fill partially</td>
+</tr>
+<tr>
+<td><code>slippage_bps</code></td>
+<td>2bps</td>
+<td>impact, market orders only</td>
+</tr>
+<tr>
+<td><code>require_through_limit</code></td>
+<td><code>True</code></td>
+<td>a touch is not a fill</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Crossing is not free.</strong> A market order, or a limit priced at or through the
+bar's open, takes liquidity and pays <code>half_spread_bps</code>. A limit resting away
+from the market pays nothing — it provides liquidity, and only fills when price
+comes to it. Until this existed, momentum posted marketable limits 0.2% through
+the market and crossed 6,680 times at exactly zero modelled cost, at ~29x
+annual turnover.</p>
+<p>Sweeping the assumption against equal-weighting the same 111 names:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>half-spread</th>
+<th>return</th>
+<th>vs SPY</th>
+<th>vs equal-weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0bps</td>
+<td>+392.9%</td>
+<td>+130.2%</td>
+<td>+68.6%</td>
+</tr>
+<tr>
+<td>1.5bps (default)</td>
+<td>+367.9%</td>
+<td>+105.3%</td>
+<td>+43.6%</td>
+</tr>
+<tr>
+<td>5.0bps</td>
+<td>+316.8%</td>
+<td>+54.1%</td>
+<td><strong>−7.5%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Momentum's edge over equal-weight is roughly the size of the cost assumption,
+and inverts by 5bps. Combined with an information ratio of 0.14 (t=0.42 over
+9.2 years), <strong>the excess over equal-weight is not established.</strong> The advantage
+over SPY is more robust, but SPY is the wrong comparison for a survivorship-
+biased universe.</p>
+<h3 id="measured-not-assumed">Measured, not assumed</h3>
+<pre><code class="language-bash">python spreads.py --port 4002 --rounds 3
+</code></pre>
+<p>Samples real quoted bid/ask across the universe and writes <code>data/spreads.json</code>.
+Reads only. Falls back to the delayed tier, which does expose two-sided quotes.</p>
+<p>Measured 2026-09-08, 112 names, 3 rounds, delayed feed:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>half-spread</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>universe median</td>
+<td><strong>1.91 bps</strong></td>
+</tr>
+<tr>
+<td>p25 / p75</td>
+<td>1.12 / 3.12</td>
+</tr>
+<tr>
+<td>min (SPY) / max (DE)</td>
+<td>0.20 / 9.16</td>
+</tr>
+<tr>
+<td><strong>trade-weighted for momentum</strong></td>
+<td><strong>2.40 bps</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The 1.5bps default was too low. Momentum shows no tilt toward wide or tight
+names — its 20 most-traded average 2.04bps against 2.12 for its least-traded —
+so the trade-weighted figure is close to the simple mean of what it touches.</p>
+<p>Three limits on what this proves. These are <strong>quoted</strong> spreads, an upper bound
+on the effective cost since real fills often land inside the quote. They are
+<strong>today's</strong> spreads applied to a nine-year backtest, and spreads have generally
+narrowed, so historical cost was probably higher. And the feed is delayed by
+15-20 minutes, which perturbs a snapshot more than a level.</p>
+<h3 id="cost-sensitivity-without-re-running">Cost sensitivity without re-running</h3>
+<p>Re-running a backtest at a different spread does not measure the spread. One
+different fill changes the position, which changes every later proposal. On
+real data, raising the half-spread from 1.91 to 2.40bps <em>increased</em> the
+measured excess — path divergence, not a cost effect — so the rows of such a
+sweep are not comparable and the sweep answers nothing.</p>
+<p><code>labtrader/costs.py</code> holds the order sequence fixed and charges it differently.
+<code>sensitivity()</code> is anchored so the reference assumption reproduces the realised
+return exactly (verified: +367.94% against a realised +367.90%), and only fills
+with <code>Fill.crossed</code> pay — <strong>70% of momentum's notional crosses, 30% rests.</strong></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>half-spread</th>
+<th>drag/yr</th>
+<th>return</th>
+<th>vs equal-weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.00</td>
+<td>0.00%</td>
+<td>+381.6%</td>
+<td>+57.2%</td>
+</tr>
+<tr>
+<td>1.91 (universe median)</td>
+<td>0.40%</td>
+<td>+364.3%</td>
+<td>+40.0%</td>
+</tr>
+<tr>
+<td><strong>2.40 (measured)</strong></td>
+<td><strong>0.50%</strong></td>
+<td><strong>+359.9%</strong></td>
+<td><strong>+35.6%</strong></td>
+</tr>
+<tr>
+<td>6.00</td>
+<td>1.25%</td>
+<td>+329.1%</td>
+<td>+4.8%</td>
+</tr>
+<tr>
+<td>8.00</td>
+<td>1.66%</td>
+<td>+312.8%</td>
+<td>−11.5%</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>breakeven_bps()</code> gives the number directly: momentum stops beating
+equal-weight at a <strong>6.59bps</strong> half-spread, and SPY at <strong>14.63bps</strong>, against a
+measured 2.40. So the edge survives roughly a 2.7x error in the spread
+estimate.</p>
+<p>That is a real margin, and it does not make the edge significant — the
+information ratio is still 0.14 (t=0.42 over 9.2 years). Cost is no longer the
+reason to doubt it; sample size is.</p>
+<p>On synthetic bars, through-vs-touch moved only <strong>+0.4%</strong> of ~3,000 passive
+orders — much less than the framing "paper trading flatters passive strategies"
+would suggest. It should bite harder on real data, where limits cluster at
+round numbers that get touched exactly and not traded through, but that is
+unmeasured. Treat the conservative default as cheap insurance, not a proven
+correction.</p>
+<p><code>--optimistic</code> relaxes all three. Note that comparing a run against its own
+optimistic twin is confounded: once one fill differs, positions differ and all
+subsequent proposals diverge. To measure the fill model itself, hold the order
+flow fixed and re-simulate it under both.</p>
+<h3 id="scoring">Scoring</h3>
+<p>Return is the least interesting output. <code>labtrader/metrics.py</code> also reports:</p>
+<ul>
+<li><strong>turnover</strong> — LLM agents overtrade and simulated commissions do not hurt</li>
+<li><strong>concentration</strong> — HHI and effective names, the NBER paper's complaint</li>
+<li><strong>overlap</strong> — <code>mean_pairwise_overlap</code> across independent runs, the herding measure</li>
+<li><strong>calibration</strong> — bucketed by the confidence the agent <em>stated</em>, scored on
+  every proposal including gate-rejected ones. A well-calibrated agent that
+  loses money is more promising than a lucky one that does not.</li>
+</ul>
+<h2 id="alerting">Alerting</h2>
+<p>Silence is the failure mode: a run that did not happen looks exactly like a run
+that decided to do nothing. A heartbeat goes out on every run, so a quiet phone
+on a weekday means something is broken.</p>
+<pre><code class="language-bash">python -m labtrader.notify --discover   # after messaging your bot once
+python -m labtrader.notify --test
+</code></pre>
+<p>Credentials live in a gitignored <code>.env</code> (see <code>.env.example</code>), never in code.
+No dependencies — the Telegram Bot API is plain HTTPS.</p>
+<p><code>Notifier.send</code> returns a bool and never raises on ordinary failures: Telegram
+being down is not a reason to skip a rebalance or abandon half-submitted
+orders. Containment stops at <code>BaseException</code> so Ctrl+C still works.</p>
+<h2 id="walk-forward-the-thing-that-makes-comparisons-mean-anything">Walk-forward (the thing that makes comparisons mean anything)</h2>
+<pre><code class="language-bash">python wf.py --bars data/bars_10y.csv
+</code></pre>
+<p>Testing ten strategies on one window and keeping the best is how a backtest
+lies. The winner is whichever one best fit that window's noise. <code>walkforward.py</code>
+selects on a training window and measures on the <em>next</em> window, so nothing is
+ever scored on the data that chose it.</p>
+<p>The output to read is not the winner's return. It is:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>diagnostic</th>
+<th>means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>selection hit rate</code></td>
+<td>how often the in-sample winner beat the median next fold; 50% is a coin flip</td>
+</tr>
+<tr>
+<td><code>rank correlation</code></td>
+<td>Spearman, in-sample vs out-of-sample rank; 0 = last window says nothing</td>
+</tr>
+<tr>
+<td><code>average candidate</code></td>
+<td>equal weight across all candidates — the bar selection must beat</td>
+</tr>
+<tr>
+<td><code>always X</code></td>
+<td>committing to one strategy and never re-choosing</td>
+</tr>
+<tr>
+<td><code>perfect hindsight</code></td>
+<td>upper bound, not achievable</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Result on 2016–2026, 14 folds, six candidates: selection did not work.</strong>
+Hit rate 36%, rank correlation +0.04, and walk-forward selection returned
++53.2% against +50.1% for simply averaging every candidate. Committing to one
+strategy and never re-choosing (<code>always trend-daily</code>, +115.4%) beat adaptive
+selection by 62 points, and buy-and-hold SPY beat everything at +184%.</p>
+<p>Four configurations were tried (rolling/anchored × return/Sharpe). The best,
+anchored-on-return, showed a 64% hit rate — which is 9 of 14 folds, p=0.21
+alone and p=0.61 after accounting for having tried four. That is not evidence,
+and searching configurations for the best hit rate is the same error one level
+up. The script now prints that p-value and says so.</p>
+<p>Candidates carry their own <code>RiskLimits</code>, because scoring a strategy under
+limits that forbid its trades measures the limits (see <code>TRENDCASH_LIMITS</code>).
+Strategies are passed as factories, never instances — they carry state across a
+run, and reusing one silently corrupts every fold after the first.</p>
+<h2 id="overnight-vs-intraday">Overnight vs intraday</h2>
+<pre><code class="language-bash">python fetch_yahoo.py --years 10 --adjust split --out data/bars_10y_split.csv
+python overnight.py --bars data/bars_10y_split.csv
+</code></pre>
+<p>Splits each name's price return into two legs that multiply back to it:
+<code>overnight = open(t)/close(t-1)</code>, <code>intraday = close(t)/open(t)</code>.</p>
+<p><strong>Use a split-only file.</strong> The usual <code>adjclose/close</code> adjustment cancels out of
+the intraday leg (same factor on open and close) but not the overnight one,
+where consecutive bars carry different factors — that credits every dividend to
+an overnight gap. <code>--adjust split</code> exists for this.</p>
+<p>Note that Yahoo's raw <code>quote</code> values are <strong>already split-adjusted</strong>; verified
+against NVDA's 2024 10-for-1, which runs 120.89 → 121.79 straight through. So
+<code>--adjust split</code> applies no factor at all. Applying one double-adjusts and was
+wrong by 40× for NVDA before this was caught. <code>test_overnight.py</code> fails if the
+committed file ever shows a split-shaped gap.</p>
+<p><strong>SPY, 2016–2026, the one unbiased read:</strong></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>leg</th>
+<th>cumulative</th>
+<th>annualised</th>
+<th>Sharpe</th>
+<th>bps/session</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>overnight</td>
+<td>+138.3%</td>
+<td>+9.10%</td>
+<td>0.81</td>
+<td>3.72</td>
+</tr>
+<tr>
+<td>intraday</td>
+<td>+47.6%</td>
+<td>+3.98%</td>
+<td>0.35</td>
+<td>1.92</td>
+</tr>
+</tbody>
+</table></div>
+<p>The effect is real and it is not stable. 2022 was −14.7% overnight and 2023
++4.3%, against +22.3% in 2024. Break-even round-trip cost is 3.72bps — one
+round trip per session means the mean <em>is</em> the hurdle — leaving roughly
++3.7%/yr at 2bps and nothing at 5bps.</p>
+<p>The all-names figure (+17.6%/yr overnight) is <strong>survivorship-biased</strong>: the
+universe is 20 mega-caps chosen today. Dropping the five biggest winners takes
+it to +11.3%/yr. Prefer the SPY row.</p>
+<p>This is a measurement, not a strategy. Capturing the overnight leg needs
+MOC/MOO execution the daily-bar replay engine cannot represent — it fills
+against the <em>next</em> bar — so it is deliberately not wired into the harness.</p>
+<h3 id="walk-forward-on-112-names">Walk-forward on 112 names</h3>
+<p>Full output in <code>results/</code>. Primary configuration was <strong>pre-registered as
+rolling/return</strong> before running, precisely so the anchored variant could not be
+cherry-picked afterwards.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>rolling (primary)</th>
+<th>anchored (check)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>walk-forward selection</td>
+<td><strong>+100.2%</strong></td>
+<td>+283.3%</td>
+</tr>
+<tr>
+<td>average candidate</td>
+<td><strong>+114.5%</strong></td>
+<td>+117.6%</td>
+</tr>
+<tr>
+<td>always mom-k20-20d</td>
+<td>+287.0%</td>
+<td>+298.0%</td>
+</tr>
+<tr>
+<td>always mom-k20-60d</td>
+<td>+282.3%</td>
+<td>+303.5%</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+185.4%</td>
+<td>+185.4%</td>
+</tr>
+<tr>
+<td>perfect hindsight</td>
+<td>+605.0%</td>
+<td>+638.9%</td>
+</tr>
+<tr>
+<td>selection hit rate</td>
+<td><strong>36%</strong></td>
+<td>71%</td>
+</tr>
+<tr>
+<td>rank correlation</td>
+<td>+0.11</td>
+<td>+0.39</td>
+</tr>
+<tr>
+<td>churn</td>
+<td>54%</td>
+<td>15%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Primary result: selection failed again, harder.</strong> At 36% it did worse than a
+coin flip and worse than simply averaging every candidate. Committing to one
+momentum variant beat adaptive selection by 187 points. This is the second
+independent reproduction, now on a universe five times larger.</p>
+<p><strong>In 0 of 14 folds did selection pick the actual best candidate.</strong> In the last
+three folds it had rotated into <code>trend-monthly</code> — which had won folds 8, 9 and
+10 — exactly as momentum won the next three by +13.9%, +12.1% and +24.8%. Plain
+performance chasing.</p>
+<p><strong>Anchored disagrees, and there is a mechanism.</strong> Training on all history rather
+than a rolling two years produces a more stable ranking (churn 15% vs 54%) and
+never chases into trend-monthly. That is a plausible hypothesis, <em>not</em> a result:
+p=0.09 on its own, ~0.17 across two configurations, and adopting it because it
+scored better is the cherry-pick this section exists to prevent.</p>
+<p><strong>The robust finding is about momentum, not about selecting.</strong> A momentum
+variant was the best candidate in <strong>10 of 14 out-of-sample folds</strong> (p=0.004
+against a 2-in-6 null), in both configurations, at both a 20-day and a 60-day
+lookback. Two different parameterisations landing within 5 points of each other
+(+287% / +282%) is weak evidence the effect is not a fitted artifact.</p>
+<p>Caveat that walk-forward does not address: momentum turns over ~29x NAV/year and
+<code>ExecutionModel</code> charges no spread on limit orders. At that turnover a 1-2bps
+effective spread is roughly 0.5-0.9%/yr compounding against these numbers.</p>
+<h2 id="scout-milestone-5">Scout (milestone 5)</h2>
+<p>The first agent. Sees price-derived features for the whole universe and its own
+book, returns names to hold, and emits <code>Proposal</code>s judged by the <strong>same</strong>
+<code>evaluate()</code> as everything else. It can ask for anything; the gate decides.</p>
+<p>Needs an API key (<code>ANTHROPIC_API_KEY</code>, or <code>ant auth login</code>) and <code>pip install
+anthropic</code>. <strong>Not yet run against the live API</strong> — everything below the network
+call is covered by 40 tests using a scripted client.</p>
+<pre><code class="language-python">from labtrader.llm import AnthropicClient, CachingClient
+from labtrader.scout import Scout
+scout = Scout(CachingClient(AnthropicClient()), k=20, target_weight=0.045)
+</code></pre>
+<h3 id="billing-and-the-spend-guardrail">Billing and the spend guardrail</h3>
+<p>API usage bills to <strong>Anthropic Console</strong> — pay-as-you-go, separate from any
+Claude subscription (Max covers claude.ai, Desktop and Claude Code, not
+programmatic API calls). Set a spend limit in the Console.</p>
+<p>In code, cap the calls. Composition order matters:</p>
+<pre><code class="language-python">client = CachingClient(CallBudget(AnthropicClient(), max_calls=500))
+</code></pre>
+<p>The budget wraps the <em>network</em> client and the cache wraps the budget, so cache
+hits are free and uncounted and only paid calls are charged against it.
+Reversing them caps re-runs that cost nothing. A budget stop reaches Scout as a
+held book and a <code>failures</code> increment, not a crash.</p>
+<p><strong>The cache invalidation trap:</strong> the key covers system + user + schema, so one
+word changed in <code>SYSTEM</code> misses all ~462 entries. Prompt iteration costs ~$21
+<em>per iteration</em>. Test prompt changes on a one-year window (~50 calls, ~$2)
+before running the full history.</p>
+<p><strong>Caching is not an optimisation.</strong> A nine-year weekly backtest is ~462 calls;
+without a cache each re-run costs that again <em>and returns different answers</em>,
+so the harness loses reproducibility — the one property it exists for.
+<code>CachingClient</code> keys on system + user + schema and writes atomically.</p>
+<p>Estimated first full backtest: <strong>~$21</strong> at Opus 5 rates (~1,559 input tokens
+per call). Cached re-runs are free.</p>
+<h3 id="what-its-built-to-test">What it's built to test</h3>
+<p>The NBER result: LLM agents converge on concentrated, high-valuation,
+heavily-covered names and don't beat passive benchmarks. So Scout's prompt
+carries <strong>returns and volatility only</strong> — no market cap, no sector, no company
+names. A test asserts none of those leak into the rendered table. If Scout
+still drifts to mega-caps, that came from the model's priors, not the prompt.</p>
+<p><code>mean_pairwise_overlap()</code> in <code>metrics.py</code> is the measurement: run Scout several
+times and see whether independent instances converge on the same names. That
+is the herding experiment the earlier <code>--seeds</code> flag could not do, because it
+only perturbed a lookback.</p>
+<h3 id="failure-handling">Failure handling</h3>
+<p>A model outage or an unusable reply <strong>holds the book</strong> rather than flattening
+it, and increments <code>scout.failures</code> — a run with many failures is not a result.
+Hallucinated symbols are dropped before the gate so the rejection histogram
+stays about judgment rather than spelling. Out-of-range confidences are passed
+through deliberately: clamping would hide miscalibration, and the gate records
+it as <code>BAD_CONFIDENCE</code>.</p>
+<h3 id="what-the-api-actually-costs">What the API actually costs</h3>
+<p>Measured prompt: 1,559 input tokens for the 112-name table. Output is the
+unknown — thinking bills as output and cannot be predicted from the prompt,
+so <code>AnthropicClient.usage()</code> records it and turns the estimate into a
+measurement after the first real call. Watch <code>output_per_input</code>: above ~2,
+thinking dominates the bill and <code>effort</code> is the lever.</p>
+<p><strong>Measured, 2026-09-08, one real call at <code>effort=medium</code>:</strong> 4,383 input and
+1,108 output tokens, <strong>$0.0496 per call</strong>. That makes a full nine-year backtest
+<strong>$22.92</strong> and a year of weekly running <strong>$2.48</strong>.</p>
+<p>Two corrections to the estimates that preceded it. Input was <strong>2.8x higher</strong>
+than a chars/4 heuristic predicted — the schema is billed too, and a dense
+numeric table tokenises badly. Output landed at the <em>low</em> end, so
+<code>output_per_input</code> is <strong>0.25</strong>: thinking does not dominate this call, and
+<code>effort</code> is therefore not the cost lever it would be on a harder task. The two
+errors happened to cancel.</p>
+<p><strong>Running it is nearly free.</strong> Scout rebalances weekly — 50 calls a year:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>cadence</th>
+<th>calls/yr</th>
+<th>@1k out</th>
+<th>@2k out</th>
+<th>@4k out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>weekly (Scout today)</td>
+<td>50</td>
+<td>$1.64</td>
+<td>$2.89</td>
+<td>$5.39</td>
+</tr>
+<tr>
+<td>daily</td>
+<td>252</td>
+<td>$8.26</td>
+<td>$14.56</td>
+<td>$27.16</td>
+</tr>
+<tr>
+<td>three agents mixed</td>
+<td>352</td>
+<td>—</td>
+<td>$20.34</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Developing it is where the money goes.</strong> One full nine-year backtest is 462
+calls ≈ <strong>$27</strong>. The cache keys on system + user + schema, so <em>any</em> prompt edit
+re-pays the whole thing:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>iterations</th>
+<th>on full history</th>
+<th>on a 1-year window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>$134</td>
+<td>$14</td>
+</tr>
+<tr>
+<td>15</td>
+<td>$401</td>
+<td>$43</td>
+</tr>
+<tr>
+<td>30</td>
+<td>$801</td>
+<td>$87</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Iterate on a one-year window, then run full history once the prompt is
+settled.</strong> That single habit is worth ~90% of the development bill. <code>CallBudget</code>
+enforces the ceiling in code.</p>
+<h2 id="the-veto-agent-labtradervetopy">The veto agent (<code>labtrader/veto.py</code>)</h2>
+<p>Scout as a <em>picker</em> turned out to be momentum wearing a hat — every visible
+pick sat in Momentum's top 20, because four of its five features were momentum
+features. An agent can only express what its inputs allow.</p>
+<p><code>Vetoed</code> wraps any strategy. The strategy proposes; the agent may drop some of
+those buys and may do nothing else — it cannot add a name, resize one, or veto
+a sell.</p>
+<p>Three reasons this is the better experiment:</p>
+<ul>
+<li><strong>Cleanly measurable.</strong> Same strategy, with and without, over identical order
+  flow. <code>test_a_veto_that_never_fires_reproduces_the_strategy_exactly</code> is the
+  control — if the wrapper did anything of its own, no comparison would mean
+  anything.</li>
+<li><strong>Bounded downside.</strong> The worst an over-eager veto can do is leave you in
+  cash. It can never take a position you did not already want.</li>
+<li><strong>Asks something momentum cannot answer.</strong> A cross-sectional rank is blind to
+  regime, so the prompt carries market context — index return, breadth, median
+  volatility — which is the one input a rank does not already contain.</li>
+</ul>
+<p><strong>Fail-open, deliberately.</strong> An outage or a nonsense reply lets everything
+through. That is the opposite of Scout and for the right reason: Scout <em>was</em>
+the strategy, so failing meant doing nothing; a veto is a filter, so failing
+means not filtering. An outage must never be able to stop a book trading.</p>
+<p><strong>Sells are never shown to it</strong>, let alone vetoed. Blocking a de-risking order
+is the one thing a risk check must not do — the same principle as the gate's
+"de-risking is always allowed".</p>
+<h3 id="first-live-call-2026-09-08">First live call, 2026-09-08</h3>
+<p>Vetoed <strong>3 of 20 (15%)</strong> on reasons a cross-sectional rank structurally cannot
+produce: CRM for realised volatility of 87.9% against a 24.2% index median,
+ORCL and TSLA for negative 60d returns despite ranking on 20d — momentum
+picking up a bounce inside a downtrend.</p>
+<p>Cheaper than the picker, too: <strong>$0.0223 a call</strong> against $0.0496, since it
+screens 20 names rather than 112. A full backtest is <strong>$10.30</strong>, weekly running
+<strong>$1.11/yr</strong>.</p>
+<h3 id="result-the-veto-lost-money">Result: the veto lost money</h3>
+<p>463 rebalances, zero model failures, $9.48. Full output in
+<code>results/veto_ab_2026-09-08.txt</code>.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>return</th>
+<th>maxDD</th>
+<th>Sharpe</th>
+<th>turnover</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>momentum</td>
+<td><strong>+361.7%</strong></td>
+<td>27.5%</td>
+<td>1.04</td>
+<td>29.8x</td>
+</tr>
+<tr>
+<td>momentum + veto</td>
+<td><strong>+249.8%</strong></td>
+<td>24.4%</td>
+<td>0.99</td>
+<td>29.3x</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+262.7%</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>equal-weight 111</td>
+<td>+324.3%</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>−111.9 points.</strong> It bought a 3.1-point drawdown reduction for a third of the
+return, and Sharpe fell. The vetoed strategy underperforms both benchmarks; the
+unvetoed one beat them.</p>
+<p>Two diagnostics say why, and neither is "the model was unlucky".</p>
+<p><strong>It vetoed the wrong names.</strong> Over the following 5 sessions the vetoed
+candidates returned <strong>+0.633%</strong> against <strong>+0.343%</strong> for the kept ones — the
+veto systematically removed the <em>better</em> half (t = +1.38, so not significant,
+but pointing the wrong way). Its stated reasons were sound-sounding — high
+realised volatility, negative longer-horizon returns — and in this universe
+those were the names that went up.</p>
+<p><strong>It never adapted.</strong> The veto rate sat between 16.7% and 21.2% every single
+year, with 2022 (21.2%) indistinguishable from 2021 (16.7%). It was sold as
+regime awareness and delivered a <strong>flat ~19% haircut</strong> — which a rule could
+apply for free, and which is exactly the failure mode the design was meant to
+avoid.</p>
+<p>The one thing it did do is cut the drawdown, which is what indiscriminately
+holding back ~19% of buying does.</p>
+<h2 id="the-small-cap-test">The small-cap test</h2>
+<p>The capacity argument said a small account's structural edge lives where
+institutions cannot trade. Every failure above happened in 112 mega-caps, so
+that argument was never actually tested. 109 small/mid caps, hand-picked and
+therefore maximally survivorship-biased, at <strong>23x lower dollar volume</strong>
+(median $39.8M/day against $919M).</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>momentum</th>
+<th>equal-weight</th>
+<th>index</th>
+<th>edge vs EW</th>
+<th>maxDD</th>
+<th>Sharpe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap (111)</td>
+<td>+361.7%</td>
+<td>+324.3%</td>
+<td>SPY +262.7%</td>
+<td><strong>+37.4%</strong></td>
+<td>27.5%</td>
+<td>1.04</td>
+</tr>
+<tr>
+<td>small cap (109)</td>
+<td>+374.1%</td>
+<td>+360.9%</td>
+<td>IWM +134.4%</td>
+<td><strong>+13.3%</strong></td>
+<td>44.5%</td>
+<td>0.82</td>
+</tr>
+</tbody>
+</table></div>
+<p>The edge is <strong>smaller</strong>, not larger. Drawdown is far worse and Sharpe is lower.</p>
+<p>And the survivorship contamination is worse too: equal-weighting my hand-picked
+small caps returned +360.9% against IWM's +134.4% — a <strong>+226 point</strong> construction
+premium, against +150 for the large-cap set. Hand-recalling small caps selects
+survivors hard, and 6 of 116 tickers had already delisted, roughly 3x the
+large-cap attrition.</p>
+<h3 id="why-the-capacity-argument-fails">Why the capacity argument fails</h3>
+<p>Breakeven half-spread against equal-weighting the same universe:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>breakeven</th>
+<th>measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap</td>
+<td>6.76 bps</td>
+<td>2.40 bps — clears it</td>
+</tr>
+<tr>
+<td>small cap</td>
+<td><strong>4.08 bps</strong></td>
+<td><strong>14.27 bps — 3.5x over</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Measured 2026-09-09 on the live feed. Quoted half-spread by universe:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>median</th>
+<th>p25</th>
+<th>p75</th>
+<th>p90</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap</td>
+<td>1.91</td>
+<td>1.12</td>
+<td>3.12</td>
+<td>4.50</td>
+<td>9.16</td>
+</tr>
+<tr>
+<td>small cap</td>
+<td><strong>10.02</strong></td>
+<td>4.88</td>
+<td>18.79</td>
+<td>29.56</td>
+<td><strong>53.49</strong> (ATNI)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Trade-weighted for what momentum actually buys: <strong>14.27 bps</strong> — worse than the
+universe median, because momentum's picks skew toward the thinner, more
+volatile names. Against a 4.08 bps breakeven, the +13.3% edge becomes
+<strong>−73.5%</strong>.</p>
+<p>The argument was self-defeating and it took running it to see why. Institutions
+avoid these names <em>because the trading costs are prohibitive</em>. Those same costs
+apply to a $100k account running 26x annual turnover. <strong>The friction that
+protects an anomaly from arbitrage also consumes it for you</strong> — you do not get
+to collect an edge that exists only because collecting it is too expensive.</p>
+<p>A low-turnover strategy might reach it. A weekly rebalance cannot.</p>
+<h2 id="low-turnover-the-cost-problem-is-solved-the-signal-problem-replaces-it">Low turnover: the cost problem is solved, the signal problem replaces it</h2>
+<p>Full surface in <code>results/turnover_sweep_2026-09-09.txt</code>. 12 configurations per
+universe (lookback 60/120/250 × hold 21/63/126/252), costs applied through
+<code>costs.sensitivity()</code> rather than by re-running, position-age rule disabled so
+it cannot force closes inside a 252-session hold.</p>
+<p><strong>Costs stop mattering.</strong> Turnover falls from 22–30x to 0.6–3.6x. In small caps
+the spread drag collapses from 43 points at the weekly baseline to under 2 at an
+annual hold. The 14.27bps toll that killed the fast version is no longer the
+binding constraint.</p>
+<p><strong>But the surface is a random field.</strong> Excess over equal-weight ranges from
+−228 to +225 points with a standard deviation of ~129, and the largest swing
+from a <em>single</em> parameter step is <strong>302 points</strong> (large cap, hold 126, lookback
+120→250). A real effect produces a gradient. This does not.</p>
+<p>Main effects are the only honest read, and they are weak:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large</th>
+<th>small</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lookback 60d</td>
+<td>−18.8</td>
+<td>−159.3</td>
+</tr>
+<tr>
+<td>lookback 120d</td>
+<td>−45.2</td>
+<td>−42.2</td>
+</tr>
+<tr>
+<td><strong>lookback 250d</strong></td>
+<td><strong>+109.8</strong></td>
+<td><strong>+0.8</strong></td>
+</tr>
+<tr>
+<td>hold 21d</td>
+<td>+151.4</td>
+<td>−16.2</td>
+</tr>
+<tr>
+<td>hold 252d</td>
+<td>−97.8</td>
+<td>−97.7</td>
+</tr>
+</tbody>
+</table></div>
+<p>Long formation with a short hold — the canonical 12-1 momentum specification —
+is the only direction that shows up in both universes, and it is a <strong>prior from
+the literature rather than a post-hoc pick</strong>, which is the one thing that makes
+it worth noting at all.</p>
+<p><strong>The standout cell is what selection looks like.</strong> look=250/hold=21 in large
+caps returned +225% over equal-weight, or <strong>+4.82%/yr</strong>. But it was chosen from
+12 cells whose mean is +15.2 and whose sd is 129 — under a pure-noise null the
+expected maximum of 12 draws sits ~210 points above the mean. The observed 225
+is almost exactly what noise produces when you sort it. And at 9.2 years, even
+an information ratio of 0.5 only reaches t=1.52.</p>
+<p>Slowing down fixed the cost problem and revealed that there was never enough
+statistical power to see the signal underneath it.</p>
+<h3 id="pre-registered-test-of-the-standout-cell">Pre-registered test of the standout cell</h3>
+<p><code>look=250 / hold=21</code>, single configuration, no sweep. Year-by-year excess over
+equal-weight:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large cap</th>
+<th>small cap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>years positive</td>
+<td><strong>5 / 9</strong></td>
+<td><strong>4 / 9</strong></td>
+</tr>
+<tr>
+<td>mean excess</td>
+<td>+5.5%/yr</td>
+<td>+3.9%/yr</td>
+</tr>
+<tr>
+<td>t</td>
+<td><strong>1.07</strong></td>
+<td><strong>1.32</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The large-cap +225% comes almost entirely from three years — 2020 (+26.3%),
+2024 (+19.9%), 2026 (+24.9%). Six of nine years are flat or negative. That is
+the shape of a few lucky stretches, not an edge.</p>
+<p>Both t-statistics are what a sweep's best cell looks like when you test it
+honestly. Confirmed noise.</p>
+<h2 id="market-neutral-construction-labtraderneutralpy">Market-neutral construction (<code>labtrader/neutral.py</code>)</h2>
+<p>Long the top of a cross-sectional ranking, short the bottom, equal dollars each
+side. The signal is a parameter, not baked in — because the argument for this
+is Grinold's law, <code>IR = IC × √breadth</code>, and our momentum implied an IC of
+<strong>0.020</strong> (a perfectly normal quant IC) against a breadth of ~50. The signal was
+never the problem. Fifty uncorrelated signals at that same IC would give IR 1.0.</p>
+<p><strong>Two bugs this exposed, both real.</strong></p>
+<p><em>The book did not stay neutral.</em> Dollar-neutral at entry decays asymmetrically:
+a losing short <strong>grows</strong> as a share of the book while a losing long shrinks. On
+a 21-session calendar this drifted to <strong>$103k net short on $100k of capital</strong> and
+took NAV to <strong>−$12,091</strong>. Selection now stays on the slow calendar (turnover is
+expensive) while the hedge is trued up whenever net exposure exceeds a
+<code>drift_band</code> of NAV. Real neutral books rebalance the hedge continuously for
+exactly this reason.</p>
+<p><em><code>SimPortfolio</code> had no margin logic.</em> A long-only book cannot lose more than it
+invests, so this never mattered. With shorts it matters enormously — simulating
+losses no broker would have permitted produces numbers that are not merely
+wrong but unfalsifiable, since no real path reaches them. <code>margin_call()</code> now
+liquidates when equity falls below 25% of gross, and <code>ReplayResult.margin_calls</code>
+records it. <strong>Any non-zero count means the run hit a wall and everything after
+it is a different experiment.</strong></p>
+<h3 id="result">Result</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>book</th>
+<th>return</th>
+<th>vol</th>
+<th>Sharpe</th>
+<th>beta</th>
+<th>maxDD</th>
+<th>turn</th>
+<th>MC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>long-only momentum</td>
+<td>+519.0%</td>
+<td>22.3%</td>
+<td>1.04</td>
+<td>0.96</td>
+<td>30.1%</td>
+<td>3.7x</td>
+<td>0</td>
+</tr>
+<tr>
+<td>L/S momentum 12-1</td>
+<td>−49.9%</td>
+<td>22.1%</td>
+<td>−0.25</td>
+<td>−0.14</td>
+<td>55.9%</td>
+<td>8.0x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>L/S reversal 5d</td>
+<td>+0.9%</td>
+<td>17.1%</td>
+<td>0.09</td>
+<td>0.08</td>
+<td>32.0%</td>
+<td>31.3x</td>
+<td>0</td>
+</tr>
+<tr>
+<td>L/S low volatility</td>
+<td>−45.2%</td>
+<td>17.3%</td>
+<td>−0.31</td>
+<td>−0.31</td>
+<td>51.2%</td>
+<td>5.2x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>L/S combined</td>
+<td>−40.9%</td>
+<td>20.1%</td>
+<td>−0.20</td>
+<td>0.05</td>
+<td>55.8%</td>
+<td>6.3x</td>
+<td>1</td>
+</tr>
+<tr>
+<td>buy-and-hold SPY</td>
+<td>+242.7%</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Beta collapsed from 0.96 to roughly zero — the construction works.</strong> The
+variance reduction did not arrive with it: volatility stayed near 20% rather
+than falling to the ~6% the argument assumed, because the short leg brings its
+own risk rather than merely cancelling the long leg's.</p>
+<p>And the alpha is negative. Shorting the bottom of a momentum ranking in a
+decade-long bull market loses money, which is not a subtle finding. Three of
+five books hit margin calls.</p>
+<h2 id="breadth-are-31-signals-actually-31-signals-labtradersignalspy-labtraderfactorspy">Breadth: are 31 signals actually 31 signals? (<code>labtrader/signals.py</code>, <code>labtrader/factors.py</code>)</h2>
+<p>The neutral construction removed the market factor and volatility barely moved,
+which killed the variance-reduction half of the argument. That left breadth:
+<code>IR = IC × √breadth</code> only pays the square root if the bets are <strong>independent</strong>.
+Thirty-one signals that all say "buy what went up" are one bet with thirty
+spare copies.</p>
+<p><code>labtrader/signals.py</code> holds 31 signals across six declared families —
+momentum, reversal, volatility, liquidity, technical, shape — drawn from the
+published anomaly literature. Every one states the prior that fixes its sign
+<em>before</em> seeing data, because choosing signs afterwards is 31 free parameters
+and would fit anything. Two pairs (<code>illiquidity</code>/<code>small_dollar_vol</code>,
+<code>dist_200ma</code>/<code>ma_cross_50_200</code>) are deliberate near-duplicates: positive
+controls for the matrix.</p>
+<p><code>labtrader/factors.py</code> measures two different correlations, because they can
+disagree and the disagreement is informative:</p>
+<ul>
+<li><strong>score correlation</strong> — do two signals rank the same names on the same day?</li>
+<li><strong>IC correlation</strong> — do two signals win and lose on the same days? This is
+  the one that governs portfolio variance.</li>
+</ul>
+<p>The headline is <code>effective_breadth</code>: the participation ratio of the
+correlation matrix's eigenvalues, <code>(ΣΛ)²/ΣΛ²</code>. It equals N for N independent
+signals and 1 for N identical ones, so it is directly the number that belongs
+under Grinold's square root — not the count in the catalog.</p>
+<pre><code class="language-bash">python correlations.py --universe large
+</code></pre>
+<p>This uses forward returns as a label, which is future data no strategy can
+see. That is legitimate <em>here</em> because nothing here trades: it is a one-time
+measurement of the library, taken to decide whether to keep building. The
+docstring says loudly that migrating this arithmetic into a <code>propose()</code> makes
+it look-ahead.</p>
+<h3 id="controls-first">Controls first</h3>
+<p>The instrument is tested against a signal that <em>is</em> the forward return (must
+measure IC ≈ 1) and against pure noise (must measure IC ≈ 0 and effective
+breadth ≈ the signal count). An instrument that cannot see a perfect edge
+cannot be trusted when it reports none, and one that finds structure in noise
+would flatter every result.</p>
+<h3 id="result-112-large-caps-447-sampled-days-20162026">Result — 112 large caps, 447 sampled days, 2016–2026</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>score correlation</th>
+<th>IC correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>signals in catalog</td>
+<td>31</td>
+<td>31</td>
+</tr>
+<tr>
+<td><strong>effective breadth</strong></td>
+<td><strong>8.40</strong></td>
+<td><strong>5.57</strong></td>
+</tr>
+<tr>
+<td>√breadth (the multiplier)</td>
+<td>2.90×</td>
+<td>2.36×</td>
+</tr>
+<tr>
+<td>√31 if independent</td>
+<td>5.57×</td>
+<td>5.57×</td>
+</tr>
+<tr>
+<td>top-3 eigenvalue share</td>
+<td>53.9%</td>
+<td>65.5%</td>
+</tr>
+<tr>
+<td>mean |correlation|</td>
+<td>0.207</td>
+<td>0.300</td>
+</tr>
+<tr>
+<td>clusters at |r| ≥ 0.5</td>
+<td>6 (one holds 24)</td>
+<td>5 (one holds 25)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Twenty-five of the thirty-one signals form a single cluster.</strong> Momentum,
+reversal, moving averages, RSI, Bollinger, drawdown depth, close location,
+volatility and skew are all chained together at |r| ≥ 0.5. Only
+<code>negative_skew</code> and <code>rev_1d</code> stand alone, with <code>vol_trend</code>/<code>volume_shock</code> and
+<code>illiquidity</code>/<code>small_dollar_vol</code> as two-name pairs — and that second pair is
+one of the duplicates planted as a control.</p>
+<p>Some correlations are near-identities the labels concealed: <code>mom_1m</code> vs
+<code>rev_21d</code> is <strong>−0.97</strong> (they are the same number with opposite signs),
+<code>mom_12_1</code> vs <code>mom_accel</code> is −0.94, <code>lowvol_60</code> vs <code>downside_dev</code> is +0.97.</p>
+<h3 id="no-signal-has-a-measurable-edge">No signal has a measurable edge</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>signals at |t| ≥ 2</td>
+<td><strong>0</strong> (1.6 expected by chance at 5%)</td>
+</tr>
+<tr>
+<td>best |t|</td>
+<td>1.55 (<code>downside_dev</code>)</td>
+</tr>
+<tr>
+<td>signs matching their a-priori prior</td>
+<td>13/31 — binomial p = 0.24, i.e. a coin flip</td>
+</tr>
+<tr>
+<td>mean individual |IC|</td>
+<td>0.0140</td>
+</tr>
+<tr>
+<td>mean individual IC (signed)</td>
+<td><strong>−0.0058</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>t-stats are deflated by <code>√(horizon/stride)</code> for overlapping forward windows.
+Without that correction they would be twice as large, which is the difference
+between "nothing here" and two apparent discoveries.</p>
+<h3 id="the-theory-was-confirmed-the-inputs-are-empty">The theory was confirmed; the inputs are empty</h3>
+<p>Equal-weighting N independent signals should multiply IC by √N_eff. It did:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>combined IC</td>
+<td>−0.0130 (t = −0.55)</td>
+</tr>
+<tr>
+<td>lift over mean signed IC</td>
+<td><strong>2.22×</strong></td>
+</tr>
+<tr>
+<td>lift predicted from IC breadth 5.57</td>
+<td><strong>2.36×</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The breadth machinery works about as advertised — it just amplified a
+negative number.</strong></p>
+<p>How well it works is less precise than that 6% gap suggests, and the small-cap
+replication below is what shows it: the denominator is a mean IC of −0.006,
+close enough to zero that the ratio is unstable. Across both universes the
+combination lifts by 2.2–3.7× against a prediction of 2.4–2.5×. That confirms
+the framework <em>directionally</em> — combining is worth roughly what the eigenvalues
+say, not √31 and not nothing — but the large-cap agreement to within 6% was
+luck, not precision.</p>
+<p>The arithmetic that follows is unforgiving. At the measured IC of 0.014, a
+usable IR needs about 1,300 independent bets a year for IR 0.5, or 5,100 for
+IR 1.0. What 31 signals actually supply:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>bets/yr</th>
+<th>IR</th>
+<th>years to t=2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5.57 breadth × monthly</td>
+<td>67</td>
+<td>0.11</td>
+<td>305</td>
+</tr>
+<tr>
+<td>5.57 breadth × weekly</td>
+<td>290</td>
+<td>0.24</td>
+<td>70</td>
+</tr>
+<tr>
+<td>8.40 breadth × weekly</td>
+<td>437</td>
+<td>0.29</td>
+<td>47</td>
+</tr>
+</tbody>
+</table></div>
+<p>And weekly rebalancing was already ruled out by the turnover work — costs eat
+it. <strong>Adding more price-derived signals does not fix this.</strong> Going from 3
+signals to 31 bought effective breadth of 5.57; the marginal signal is adding
+roughly 0.2 of a bet, and the shortfall is two orders of magnitude.</p>
+<p>Anything that changes the answer has to be <strong>genuinely orthogonal information</strong>
+— not another transformation of the same OHLCV series that every one of these
+31 signals is computed from. That is the only remaining place an LLM could
+plausibly help: as a source of <em>new</em> features from text, not as a decision
+maker over the same prices.</p>
+<h3 id="small-caps-replicate-it">Small caps replicate it</h3>
+<p>Same 31 signals, 110 small caps, same window — as a check that this is not a
+large-cap artifact. It is not.</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>large</th>
+<th>small</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>effective breadth (IC)</td>
+<td>5.57</td>
+<td><strong>6.19</strong></td>
+</tr>
+<tr>
+<td>effective breadth (score)</td>
+<td>8.40</td>
+<td><strong>8.85</strong></td>
+</tr>
+<tr>
+<td>largest cluster at |r| ≥ 0.5</td>
+<td>25 of 31</td>
+<td><strong>24 of 31</strong></td>
+</tr>
+<tr>
+<td>signals at |t| ≥ 2</td>
+<td>0</td>
+<td>1</td>
+</tr>
+<tr>
+<td>mean individual IC (signed)</td>
+<td>−0.0058</td>
+<td>−0.0039</td>
+</tr>
+<tr>
+<td>combined IC</td>
+<td>−0.0130</td>
+<td>−0.0145</td>
+</tr>
+<tr>
+<td>combination lift</td>
+<td>2.22×</td>
+<td>3.71×</td>
+</tr>
+<tr>
+<td>lift predicted</td>
+<td>2.36×</td>
+<td>2.49×</td>
+</tr>
+</tbody>
+</table></div>
+<p>The same pairs top the matrix in both universes — <code>mom_1m</code>/<code>rev_21d</code> at −0.97,
+<code>lowvol_60</code>/<code>downside_dev</code> at +0.97 — which is what a structural result looks
+like rather than a fitted one.</p>
+<p>The one signal reaching |t| ≥ 2 is <strong><code>illiquidity</code> at +2.06</strong> (IC +0.0289).
+Against 1.6 expected by chance across 31 tests, one hit is not a discovery. And
+it is the same self-defeating trade the capacity work already ran into: the
+measured trade-weighted spread on this universe is <strong>14.27 bps</strong>, several times
+the edge on offer. The one signal that shows up is the one we cannot harvest.</p>
+</article>
+</div>
+<footer>
+  <p><strong>Not investment advice.</strong> A record of an engineering and measurement exercise on simulated capital. Nothing here recommends buying, selling or holding any security, and the author is not a licensed investment adviser.</p>
+  <p>shrov.com</p>
+</footer>
+</div>
+</body>
+</html>

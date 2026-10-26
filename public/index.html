@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shrov — investing, measured</title>
+<meta name="description" content="Notes on personal investing from building the measuring tools first: honest backtests, measured costs, and null results reported as carefully as wins.">
+<meta property="og:title" content="shrov — investing, measured">
+<meta property="og:description" content="Thirty-one price signals, six independent bets: what a decade of honest backtesting says about trading a retail account.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/" aria-current="page">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a></span></nav>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Personal investing &middot; measured, not assumed</p>
+  <h1>Build the instrument before you believe the reading.</h1>
+  <p class="deck">Notes from testing investment ideas the slow way: backtests that cannot look ahead, trading costs measured from live quotes, and null results reported as carefully as wins.</p>
+</header>
+
+<section>
+  <div class="sechead"><p class="label">The paper</p></div>
+  <a class="feature" href="/paper/">
+    <h3>Thirty-One Signals, Six Bets</h3>
+    <p>A retail account cannot assemble enough independent bets to detect an edge it might actually have — and adding more price signals does not help. Nine experiments over a decade of daily bars, including two designs that put an LLM in charge.</p>
+    <dl class="strip">
+      <div><dt>Signals tested</dt><dd>31<small>six families from the anomaly literature</small></dd></div>
+      <div><dt>Independent bets</dt><dd>5.6<small>after correlation, large caps</small></dd></div>
+      <div><dt>Signals at |t| ≥ 2</dt><dd class="neg">0<small>1.6 expected by chance</small></dd></div>
+      <div><dt>Bets per year</dt><dd>67<small>against ~1,300 needed</small></dd></div>
+    </dl>
+    <span class="more">Read the paper →</span>
+  </a>
+</section>
+
+<section>
+  <div class="sechead"><p class="label">Three results worth keeping</p><h2>Each looked like an edge until it was measured</h2></div>
+  <div class="grid3">
+    <article>
+      <p class="num">−111.9 pts</p>
+      <h3>An LLM veto removed the better half</h3>
+      <p>Allowed only to drop a strategy's buys, the model dropped names that went on to beat the ones it kept (not significantly, but the wrong way) and applied the same ~19% haircut in calm years and crashes alike.</p>
+      <a href="/notebook/#result-the-veto-lost-money">The A/B test →</a>
+    </article>
+    <article>
+      <p class="num">36%</p>
+      <h3>Picking last period's winner is worse than a coin flip</h3>
+      <p>Choosing the strategy that won the previous window beat the median next window 36% of the time, and lost to simply averaging every candidate.</p>
+      <a href="/notebook/#walk-forward-on-112-names">Walk-forward →</a>
+    </article>
+    <article>
+      <p class="num">14.3 bps</p>
+      <h3>The friction that protects an anomaly consumes it</h3>
+      <p>Small caps were supposed to be where a small account wins. Their measured spread is 3.5× the break-even cost, turning a +13% edge into −74%.</p>
+      <a href="/notebook/#why-the-capacity-argument-fails">Small-cap test →</a>
+    </article>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><p class="label">For a plan</p><h2>What the author took from it</h2></div>
+  <ol class="take">
+    <li><span><b>Treat a backtest as a claim to audit, not a result.</b> Look-ahead, survivorship and free trading each manufacture returns on their own; the harness here had to rule out all three before any number meant anything.</span></li>
+    <li><span><b>Costs and turnover are the parts you control.</b> Every edge in this study was smaller than, or about the size of, a realistic trading cost. A few basis points a trade, compounded at high turnover, is the whole game.</span></li>
+    <li><span><b>Compare against the right benchmark.</b> Hand-picked lists of today's companies beat the index by 150–226 points on hindsight alone. Beating SPY with them proves nothing; beating an equal weight of the same names is the bar.</span></li>
+    <li><span><b>A clever model needs new information, not more arithmetic.</b> Thirty-one transformations of the same prices behaved like about six. More signals from the same data added roughly a fifth of a bet each.</span></li>
+  </ol>
+  <p class="note">These are the author's conclusions from a research exercise on simulated money, not advice for your situation.</p>
+</section>
+
+<section>
+  <div class="sechead"><p class="label">The workings</p></div>
+  <a class="feature" href="/notebook/">
+    <h3>Lab notebook</h3>
+    <p>The running record behind the paper: harness design, cost measurement, every experiment and every number, including the errors the tests caught along the way.</p>
+    <span class="more">Open the notebook →</span>
+  </a>
+</section>
+
+<footer>
+  <p><strong>Not investment advice.</strong> Research on simulated capital. Nothing here recommends buying, selling or holding any security, and the author is not a licensed investment adviser.</p>
+  <p>shrov.com &middot; <a href="/about/">About</a></p>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — shrov</title>
+<meta name="description" content="What shrov.com is, how the research was done, and what it is not.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/">Notebook</a><a href="/about/" aria-current="page">About</a></span></nav>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">About</p>
+  <h1>A small site about measuring things properly</h1>
+  <p class="deck">Personal-investing research by an engineer who would rather report a clean null result than a flattering backtest.</p>
+</header>
+
+<section>
+  <div class="sechead"><h2>How the work was done</h2></div>
+  <p>The study started from a newspaper profile of an investor handing money to named AI agents. Before building any agent, we built the measuring apparatus: a replay backtester and a paper-trading harness that share one risk gate, prevent look-ahead by construction, fill orders on the day after the decision, and charge trading costs measured from live quotes rather than assumed.</p>
+  <p>Experiments were run in order, each because the previous one left a specific objection standing, and the failures are reported alongside the rest. Where a configuration was chosen, the choice was written down before the run.</p>
+  <ul>
+    <li>Universes: 112 US large caps and 110 small caps, September 2016 – September 2026, daily bars.</li>
+    <li>Capital: $100,000, simulated. No real money was traded.</li>
+    <li>Limits: the conclusions apply to price-derived signals on these two universes over this decade; the paper's §6 lists the limitations in full.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sechead"><h2>What this is not</h2></div>
+  <p><strong>Not investment advice.</strong> Nothing on this site recommends buying, selling or holding any security or strategy, and the author is not a licensed investment adviser. Past and simulated results do not predict future returns.</p>
+  <p>No tracking: the site sets no cookies and runs no analytics. Fonts are loaded from Google Fonts.</p>
+</section>
+
+<footer>
+  <p>shrov.com</p>
+</footer>
+</div>
+</body>
+</html>
