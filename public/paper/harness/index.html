@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §1 · Why it needed a harness</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §1 · Why it needed a harness">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 1 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" aria-current="page" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="question">
+  <div class="sechead"><div class="secnum">§ 1</div><h2 class="title">The question, and why it needed a harness</h2></div>
+
+  <p>The prompt was a newspaper story: a private investor running money through several LLM agents, each with a name and a personality. The obvious first move is to build the agents. We built the measuring apparatus first, because the interesting failure mode of this idea is not that the agents lose money — it is that a badly-built backtest will say they made money.</p>
+
+  <p>Everything below rests on five properties of the harness. Each exists because its absence produces a specific, well-documented lie.</p>
+
+  <h3><span class="tag">Property 1</span>Look-ahead is prevented structurally, not by discipline</h3>
+  <p>A strategy is handed a <code>MarketView</code> pinned to one date. It holds no reference to the underlying series and exposes exactly five members: <code>close</code>, <code>history</code>, <code>ret</code>, <code>symbols</code>, <code>today</code>. Reading tomorrow is not something to remember not to do; there is no method that returns it. A test asserts the entire public surface, so adding one would break the build.</p>
+
+  <h3><span class="tag">Property 2</span>The backtest runs the live risk gate</h3>
+  <p>A backtest that gates differently from production is testing something other than what will run. The same pure function <code>evaluate(proposal, context, limits, universe)</code> judges every order in replay and in the paper account. The replay engine satisfies the gate's paper-account check with an account id of <code>DU-REPLAY</code> rather than by branching around it.</p>
+
+  <h3><span class="tag">Property 3</span>Decisions at close of <em>t</em>, fills against <em>t+1</em></h3>
+  <p>Accepted orders enter a pending list and are only touched on the next iteration. Unfilled day orders expire, matching the <code>tif="DAY"</code> the broker actually sends.</p>
+
+  <h3><span class="tag">Property 4</span>Survivorship is controlled by construction</h3>
+  <p>Both universes were assembled from memory in 2026 and are therefore stacked with survivors. The benchmark is not an index — it is <em>equal-weighting the same names</em>, which carries exactly the same bias. A strategy that cannot beat equal-weighting its own universe is not being helped by survivorship; it is worse than not choosing. The size of the problem is visible: equal-weighting the hand-picked large caps beat SPY by <strong>150 points</strong>, and the small caps beat IWM by <strong>226</strong>.</p>
+
+  <h3><span class="tag">Property 5</span>Costs are measured, not assumed</h3>
+  <p>Quoted half-spreads were sampled from the live feed across both universes. Cost sensitivity is computed by holding the realised order sequence fixed and recharging it, never by re-running the strategy — re-running changes one fill, which changes every later position, and the resulting rows are not comparable. The anchoring is verified: the reference assumption reproduces the realised return to within 0.04 points (+367.94% against +367.90%).</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/"><small>← Previous</small>Overview</a><a class="next" href="/paper/agents/"><small>Next →</small>§2 · Agents and strategy selection</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

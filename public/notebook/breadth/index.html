@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breadth (1/3) — Lab notebook — shrov</title>
+<meta name="description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<meta property="og:title" content="Breadth (1/3) — Lab notebook — shrov">
+<meta property="og:description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 7 of 7 · page 1 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" aria-current="page" title="Breadth">7</a></nav><header class="chap"><h1>Breadth</h1><p class="deck">Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/breadth/" aria-current="page">1</a><a href="/notebook/breadth/2/">2</a><a href="/notebook/breadth/3/">3</a></nav><article class="nbody"><h2 id="breadth-are-31-signals-actually-31-signals-labtradersignalspy-labtraderfactorspy">Breadth: are 31 signals actually 31 signals? (<code>labtrader/signals.py</code>, <code>labtrader/factors.py</code>)</h2>
+<p>The neutral construction removed the market factor and volatility barely moved,
+which killed the variance-reduction half of the argument. That left breadth:
+<code>IR = IC × √breadth</code> only pays the square root if the bets are <strong>independent</strong>.
+Thirty-one signals that all say "buy what went up" are one bet with thirty
+spare copies.</p>
+<p><code>labtrader/signals.py</code> holds 31 signals across six declared families —
+momentum, reversal, volatility, liquidity, technical, shape — drawn from the
+published anomaly literature. Every one states the prior that fixes its sign
+<em>before</em> seeing data, because choosing signs afterwards is 31 free parameters
+and would fit anything. Two pairs (<code>illiquidity</code>/<code>small_dollar_vol</code>,
+<code>dist_200ma</code>/<code>ma_cross_50_200</code>) are deliberate near-duplicates: positive
+controls for the matrix.</p>
+<p><code>labtrader/factors.py</code> measures two different correlations, because they can
+disagree and the disagreement is informative:</p>
+<ul>
+<li><strong>score correlation</strong> — do two signals rank the same names on the same day?</li>
+<li><strong>IC correlation</strong> — do two signals win and lose on the same days? This is
+  the one that governs portfolio variance.</li>
+</ul>
+<p>The headline is <code>effective_breadth</code>: the participation ratio of the
+correlation matrix's eigenvalues, <code>(ΣΛ)²/ΣΛ²</code>. It equals N for N independent
+signals and 1 for N identical ones, so it is directly the number that belongs
+under Grinold's square root — not the count in the catalog.</p>
+<pre><code class="language-bash">python correlations.py --universe large
+</code></pre>
+<p>This uses forward returns as a label, which is future data no strategy can
+see. That is legitimate <em>here</em> because nothing here trades: it is a one-time
+measurement of the library, taken to decide whether to keep building. The
+docstring says loudly that migrating this arithmetic into a <code>propose()</code> makes
+it look-ahead.</p>
+<h3 id="controls-first">Controls first</h3>
+<p>The instrument is tested against a signal that <em>is</em> the forward return (must
+measure IC ≈ 1) and against pure noise (must measure IC ≈ 0 and effective
+breadth ≈ the signal count). An instrument that cannot see a perfect edge
+cannot be trusted when it reports none, and one that finds structure in noise
+would flatter every result.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/neutral/"><small>← Previous</small>Market-neutral: Market-neutral construction (labtrader/neutral.py)</a><a class="next" href="/notebook/breadth/2/"><small>Next →</small>Result — 112 large caps, 447 sampled days, 2016–2026</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

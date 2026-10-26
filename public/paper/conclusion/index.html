@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §8 · Conclusion</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §8 · Conclusion">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 10 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" aria-current="page" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="conclusion">
+  <div class="sechead"><div class="secnum">§ 8</div><h2 class="title">Conclusion</h2></div>
+
+  <p>Nine experiments, two LLM agent designs, two universes, a decade of daily bars, and 372 tests produced no configuration that beat buy-and-hold. That alone would be unremarkable — most such projects end this way, and most of them end without knowing why.</p>
+
+  <p>The contribution here is the <em>why</em>, and it is measurable rather than anecdotal. The limiting factor is not signal quality: an IC of 0.014–0.020 is an ordinary quantitative IC, and professionals build viable products from less. The limiting factor is <strong>breadth</strong>. Thirty-one signals drawn from six distinct-sounding families of the anomaly literature deliver 5.6 independent bets, and at a monthly rebalance that supports an information ratio of 0.11 — three hundred years to statistical significance.</p>
+
+  <p>Successful quantitative funds do not solve this with better mathematics on closing prices. They solve it with breadth: thousands of instruments across asset classes, data that is not public, and institutional financing applied to a small edge. A retail account can replicate their mathematics exactly. It cannot replicate their bet count, and the mathematics is worthless without it.</p>
+
+  <p>The apparatus outlived the hypothesis. It caught a 40× data error, a test suite silently running two-thirds of its tests, a safety check that checked nothing, a simulator that permitted negative equity, and — twice — a claim of ours that was stronger than the evidence. That is what it was built for, and it is the part worth keeping.</p>
+</section>
+
+<footer>
+  <p><strong>Reproducibility.</strong> All figures in this paper are produced by scripts in the lab's code repository, which is not published; the <a href="/notebook/">lab notebook</a> records each run. The breadth study is <code>python correlations.py --universe large|small</code>; the signal catalogue is <code>labtrader/signals.py</code> and the measurement machinery <code>labtrader/factors.py</code>. Panel: 447 sampled days, sampling stride 5 sessions, 21-session forward return, warm-up 260 sessions. Eigendecomposition by cyclic Jacobi, stdlib only.</p>
+  <p><strong>Not investment advice.</strong> This is a record of an engineering and measurement exercise on simulated capital. Nothing here is a recommendation to buy, sell, or hold any security, and the author is not a licensed investment adviser.</p>
+</footer>
+
+<footer>
+  <p><strong>Reproducibility.</strong> All figures in this paper are produced by scripts in the lab's code repository, which is not published; the <a href="/notebook/">lab notebook</a> records each run. The breadth study is <code>python correlations.py --universe large|small</code>; the signal catalogue is <code>labtrader/signals.py</code> and the measurement machinery <code>labtrader/factors.py</code>. Panel: 447 sampled days, sampling stride 5 sessions, 21-session forward return, warm-up 260 sessions. Eigendecomposition by cyclic Jacobi, stdlib only.</p>
+  <p><strong>Not investment advice.</strong> This is a record of an engineering and measurement exercise on simulated capital. Nothing here is a recommendation to buy, sell, or hold any security, and the author is not a licensed investment adviser.</p>
+</footer></div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/limits/"><small>← Previous</small>§6–7 · Limits, and what would change the answer</a><span></span></nav>
+</div>
+</body>
+</html>

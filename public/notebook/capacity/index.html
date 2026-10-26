@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Small caps and turnover (1/2) — Lab notebook — shrov</title>
+<meta name="description" content="Why the capacity argument defeats itself, and what slowing down revealed.">
+<meta property="og:title" content="Small caps and turnover (1/2) — Lab notebook — shrov">
+<meta property="og:description" content="Why the capacity argument defeats itself, and what slowing down revealed.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 5 of 7 · page 1 of 2</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" aria-current="page" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>Small caps and turnover</h1><p class="deck">Why the capacity argument defeats itself, and what slowing down revealed.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/capacity/" aria-current="page">1</a><a href="/notebook/capacity/2/">2</a></nav><article class="nbody"><h2 id="the-small-cap-test">The small-cap test</h2>
+<p>The capacity argument said a small account's structural edge lives where
+institutions cannot trade. Every failure above happened in 112 mega-caps, so
+that argument was never actually tested. 109 small/mid caps, hand-picked and
+therefore maximally survivorship-biased, at <strong>23x lower dollar volume</strong>
+(median $39.8M/day against $919M).</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>momentum</th>
+<th>equal-weight</th>
+<th>index</th>
+<th>edge vs EW</th>
+<th>maxDD</th>
+<th>Sharpe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap (111)</td>
+<td>+361.7%</td>
+<td>+324.3%</td>
+<td>SPY +262.7%</td>
+<td><strong>+37.4%</strong></td>
+<td>27.5%</td>
+<td>1.04</td>
+</tr>
+<tr>
+<td>small cap (109)</td>
+<td>+374.1%</td>
+<td>+360.9%</td>
+<td>IWM +134.4%</td>
+<td><strong>+13.3%</strong></td>
+<td>44.5%</td>
+<td>0.82</td>
+</tr>
+</tbody>
+</table></div>
+<p>The edge is <strong>smaller</strong>, not larger. Drawdown is far worse and Sharpe is lower.</p>
+<p>And the survivorship contamination is worse too: equal-weighting my hand-picked
+small caps returned +360.9% against IWM's +134.4% — a <strong>+226 point</strong> construction
+premium, against +150 for the large-cap set. Hand-recalling small caps selects
+survivors hard, and 6 of 116 tickers had already delisted, roughly 3x the
+large-cap attrition.</p>
+<h3 id="why-the-capacity-argument-fails">Why the capacity argument fails</h3>
+<p>Breakeven half-spread against equal-weighting the same universe:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>breakeven</th>
+<th>measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap</td>
+<td>6.76 bps</td>
+<td>2.40 bps — clears it</td>
+</tr>
+<tr>
+<td>small cap</td>
+<td><strong>4.08 bps</strong></td>
+<td><strong>14.27 bps — 3.5x over</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Measured 2026-09-09 on the live feed. Quoted half-spread by universe:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>median</th>
+<th>p25</th>
+<th>p75</th>
+<th>p90</th>
+<th>max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large cap</td>
+<td>1.91</td>
+<td>1.12</td>
+<td>3.12</td>
+<td>4.50</td>
+<td>9.16</td>
+</tr>
+<tr>
+<td>small cap</td>
+<td><strong>10.02</strong></td>
+<td>4.88</td>
+<td>18.79</td>
+<td>29.56</td>
+<td><strong>53.49</strong> (ATNI)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Trade-weighted for what momentum actually buys: <strong>14.27 bps</strong> — worse than the
+universe median, because momentum's picks skew toward the thinner, more
+volatile names. Against a 4.08 bps breakeven, the +13.3% edge becomes
+<strong>−73.5%</strong>.</p>
+<p>The argument was self-defeating and it took running it to see why. Institutions
+avoid these names <em>because the trading costs are prohibitive</em>. Those same costs
+apply to a $100k account running 26x annual turnover. <strong>The friction that
+protects an anomaly from arbitrage also consumes it for you</strong> — you do not get
+to collect an edge that exists only because collecting it is too expensive.</p>
+<p>A low-turnover strategy might reach it. A weekly rebalance cannot.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/agents/4/"><small>← Previous</small>LLM agents: Result: the veto lost money</a><a class="next" href="/notebook/capacity/2/"><small>Next →</small>Low turnover: the cost problem is solved, the signal problem replaces it</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

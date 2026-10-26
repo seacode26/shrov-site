@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breadth (2/3) — Lab notebook — shrov</title>
+<meta name="description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<meta property="og:title" content="Breadth (2/3) — Lab notebook — shrov">
+<meta property="og:description" content="Are 31 signals 31 signals? Controls, the correlation matrix, and the small-cap replication.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 7 of 7 · page 2 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" aria-current="page" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Breadth <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/breadth/">1</a><a href="/notebook/breadth/2/" aria-current="page">2</a><a href="/notebook/breadth/3/">3</a></nav><article class="nbody"><h3 id="result-112-large-caps-447-sampled-days-20162026">Result — 112 large caps, 447 sampled days, 2016–2026</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>score correlation</th>
+<th>IC correlation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>signals in catalog</td>
+<td>31</td>
+<td>31</td>
+</tr>
+<tr>
+<td><strong>effective breadth</strong></td>
+<td><strong>8.40</strong></td>
+<td><strong>5.57</strong></td>
+</tr>
+<tr>
+<td>√breadth (the multiplier)</td>
+<td>2.90×</td>
+<td>2.36×</td>
+</tr>
+<tr>
+<td>√31 if independent</td>
+<td>5.57×</td>
+<td>5.57×</td>
+</tr>
+<tr>
+<td>top-3 eigenvalue share</td>
+<td>53.9%</td>
+<td>65.5%</td>
+</tr>
+<tr>
+<td>mean |correlation|</td>
+<td>0.207</td>
+<td>0.300</td>
+</tr>
+<tr>
+<td>clusters at |r| ≥ 0.5</td>
+<td>6 (one holds 24)</td>
+<td>5 (one holds 25)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Twenty-five of the thirty-one signals form a single cluster.</strong> Momentum,
+reversal, moving averages, RSI, Bollinger, drawdown depth, close location,
+volatility and skew are all chained together at |r| ≥ 0.5. Only
+<code>negative_skew</code> and <code>rev_1d</code> stand alone, with <code>vol_trend</code>/<code>volume_shock</code> and
+<code>illiquidity</code>/<code>small_dollar_vol</code> as two-name pairs — and that second pair is
+one of the duplicates planted as a control.</p>
+<p>Some correlations are near-identities the labels concealed: <code>mom_1m</code> vs
+<code>rev_21d</code> is <strong>−0.97</strong> (they are the same number with opposite signs),
+<code>mom_12_1</code> vs <code>mom_accel</code> is −0.94, <code>lowvol_60</code> vs <code>downside_dev</code> is +0.97.</p>
+<h3 id="no-signal-has-a-measurable-edge">No signal has a measurable edge</h3>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>signals at |t| ≥ 2</td>
+<td><strong>0</strong> (1.6 expected by chance at 5%)</td>
+</tr>
+<tr>
+<td>best |t|</td>
+<td>1.55 (<code>downside_dev</code>)</td>
+</tr>
+<tr>
+<td>signs matching their a-priori prior</td>
+<td>13/31 — binomial p = 0.24, i.e. a coin flip</td>
+</tr>
+<tr>
+<td>mean individual |IC|</td>
+<td>0.0140</td>
+</tr>
+<tr>
+<td>mean individual IC (signed)</td>
+<td><strong>−0.0058</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>t-stats are deflated by <code>√(horizon/stride)</code> for overlapping forward windows.
+Without that correction they would be twice as large, which is the difference
+between "nothing here" and two apparent discoveries.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/breadth/"><small>← Previous</small>Breadth: are 31 signals actually 31 signals? (labtrader/signals.py, labtrader/factors.py)</a><a class="next" href="/notebook/breadth/3/"><small>Next →</small>The theory was confirmed; the inputs are empty</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

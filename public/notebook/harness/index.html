@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The harness (1/2) — Lab notebook — shrov</title>
+<meta name="description" content="One design rule, the broker connection, paper-only safeguards, risk limits and alerting.">
+<meta property="og:title" content="The harness (1/2) — Lab notebook — shrov">
+<meta property="og:description" content="One design rule, the broker connection, paper-only safeguards, risk limits and alerting.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 1 of 7 · page 1 of 2</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" aria-current="page" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>The harness</h1><p class="deck">One design rule, the broker connection, paper-only safeguards, risk limits and alerting.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/harness/" aria-current="page">1</a><a href="/notebook/harness/2/">2</a></nav><article class="nbody"><h2 id="the-one-design-decision">The one design decision</h2>
+<p>The LLM never touches the order API.</p>
+<pre><code>market data ──&gt; Context Builder (deterministic)
+                     │
+                     v
+             Agent (LLM) ──&gt; Proposal
+                     │
+                     v
+             Risk Gate (pure Python) ──reject──&gt; journal + reason
+                     │ accept
+                     v
+             Broker (ib_async) ──&gt; IBKR paper
+</code></pre>
+<p>A proposal is journalled <em>before</em> the gate runs, so agent judgment is scored
+separately from execution luck. A rejected proposal that would have been a
+winner is a finding about the limits, not about the agent.</p>
+<h2 id="first-connection-run-preflight">First connection: run preflight</h2>
+<pre><code class="language-bash">python preflight.py --port 4002
+</code></pre>
+<p>Checks connection, paper-account prefix, NAV, contract lookup, whether quotes
+come back live or delayed (i.e. whether subscription sharing actually took
+effect), historical-data permission, and the volume-units question below.
+Places no orders. Each check catches its own failure so one break doesn't mask
+the rest.</p>
+<h3 id="market-data-on-a-paper-account">Market data on a paper account</h3>
+<p>Sharing is opt-in: <strong>Client Portal → Settings → Account Settings → Paper
+Trading Account → Yes</strong>, then choose which live username's subscriptions to
+share. You cannot consume the shared data on live and paper simultaneously.</p>
+<p><code>reqHistoricalData</code> requires a Level 1 streaming subscription — delayed mode
+does <strong>not</strong> bypass it, and without one you get error 162. IBKR's free
+<strong>US Real-Time Non-Consolidated Streaming Quotes</strong> (Cboe One + IEX) satisfies
+this, but it is not the NBBO, and the SEC Vendor Display Rule means TWS won't
+show it in the order ticket without a paid consolidated subscription.</p>
+<h3 id="the-volume-units-question-unresolved">The volume-units question — unresolved</h3>
+<p><code>ExecutionModel.max_participation</code> caps orders at a share of bar volume, which
+assumes that number is consolidated share volume. Two things can make it wrong,
+neither of which announces itself:</p>
+<ul>
+<li>IBKR reports historical stock volume in <strong>round lots</strong> (×100), not shares.</li>
+<li>A non-consolidated feed may carry <strong>venue-limited</strong> volume (~10× low).</li>
+</ul>
+<p>Either would make the model far more restrictive than intended — 100× or 10×.
+<code>preflight.py</code> pulls a liquid name and reports which case it's looking at.
+Settle this before running any strategy whose results you intend to believe.</p>
+<h2 id="paper-only-enforcement">Paper-only enforcement</h2>
+<p>Two real checks and one weak one, because this is the only bug here that costs
+money:</p>
+<ul>
+<li><code>IBKRPaper.connect</code> drops the connection unless every managed account starts
+  with <code>DU</code>/<code>DF</code>. <strong>This is the load-bearing check.</strong></li>
+<li>The gate rejects <code>NOT_PAPER_ACCOUNT</code> on a separate code path, so a caller
+  that bypasses the broker wrapper is still stopped.</li>
+<li><code>IBKRPaper.__init__</code> refuses any port outside <code>{7497, 4002}</code>. Weaker than it
+  looks, and originally overstated here: <strong>the port proves nothing about the
+  session</strong>. Gateway's API port is a config value, and a Gateway logged into a
+  <em>live</em> account will happily serve it on 4002. Observed in practice on
+  2026-09-08, where port 4002 returned live accounts.
+  The port check only catches typing the live port; the account prefix is what
+  actually protects you.</li>
+</ul></article><nav class="pn" aria-label="Previous and next"><span></span><a class="next" href="/notebook/harness/2/"><small>Next →</small>What the sandbox lies about</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

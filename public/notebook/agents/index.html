@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM agents (1/4) — Lab notebook — shrov</title>
+<meta name="description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<meta property="og:title" content="LLM agents (1/4) — Lab notebook — shrov">
+<meta property="og:description" content="Scout the picker, what the API costs, and the veto that lost 112 points.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 4 of 7 · page 1 of 4</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" aria-current="page" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>LLM agents</h1><p class="deck">Scout the picker, what the API costs, and the veto that lost 112 points.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/agents/" aria-current="page">1</a><a href="/notebook/agents/2/">2</a><a href="/notebook/agents/3/">3</a><a href="/notebook/agents/4/">4</a></nav><article class="nbody"><h2 id="scout-milestone-5">Scout (milestone 5)</h2>
+<p>The first agent. Sees price-derived features for the whole universe and its own
+book, returns names to hold, and emits <code>Proposal</code>s judged by the <strong>same</strong>
+<code>evaluate()</code> as everything else. It can ask for anything; the gate decides.</p>
+<p>Needs an API key (<code>ANTHROPIC_API_KEY</code>, or <code>ant auth login</code>) and <code>pip install
+anthropic</code>. <strong>Not yet run against the live API</strong> — everything below the network
+call is covered by 40 tests using a scripted client.</p>
+<pre><code class="language-python">from labtrader.llm import AnthropicClient, CachingClient
+from labtrader.scout import Scout
+scout = Scout(CachingClient(AnthropicClient()), k=20, target_weight=0.045)
+</code></pre>
+<h3 id="billing-and-the-spend-guardrail">Billing and the spend guardrail</h3>
+<p>API usage bills to <strong>Anthropic Console</strong> — pay-as-you-go, separate from any
+Claude subscription (Max covers claude.ai, Desktop and Claude Code, not
+programmatic API calls). Set a spend limit in the Console.</p>
+<p>In code, cap the calls. Composition order matters:</p>
+<pre><code class="language-python">client = CachingClient(CallBudget(AnthropicClient(), max_calls=500))
+</code></pre>
+<p>The budget wraps the <em>network</em> client and the cache wraps the budget, so cache
+hits are free and uncounted and only paid calls are charged against it.
+Reversing them caps re-runs that cost nothing. A budget stop reaches Scout as a
+held book and a <code>failures</code> increment, not a crash.</p>
+<p><strong>The cache invalidation trap:</strong> the key covers system + user + schema, so one
+word changed in <code>SYSTEM</code> misses all ~462 entries. Prompt iteration costs ~$21
+<em>per iteration</em>. Test prompt changes on a one-year window (~50 calls, ~$2)
+before running the full history.</p>
+<p><strong>Caching is not an optimisation.</strong> A nine-year weekly backtest is ~462 calls;
+without a cache each re-run costs that again <em>and returns different answers</em>,
+so the harness loses reproducibility — the one property it exists for.
+<code>CachingClient</code> keys on system + user + schema and writes atomically.</p>
+<p>Estimated first full backtest: <strong>~$21</strong> at Opus 5 rates (~1,559 input tokens
+per call). Cached re-runs are free.</p>
+<h3 id="what-its-built-to-test">What it's built to test</h3>
+<p>The NBER result: LLM agents converge on concentrated, high-valuation,
+heavily-covered names and don't beat passive benchmarks. So Scout's prompt
+carries <strong>returns and volatility only</strong> — no market cap, no sector, no company
+names. A test asserts none of those leak into the rendered table. If Scout
+still drifts to mega-caps, that came from the model's priors, not the prompt.</p>
+<p><code>mean_pairwise_overlap()</code> in <code>metrics.py</code> is the measurement: run Scout several
+times and see whether independent instances converge on the same names. That
+is the herding experiment the earlier <code>--seeds</code> flag could not do, because it
+only perturbed a lookback.</p>
+<h3 id="failure-handling">Failure handling</h3>
+<p>A model outage or an unusable reply <strong>holds the book</strong> rather than flattening
+it, and increments <code>scout.failures</code> — a run with many failures is not a result.
+Hallucinated symbols are dropped before the gate so the rejection histogram
+stays about judgment rather than spelling. Out-of-range confidences are passed
+through deliberately: clamping would hide miscalibration, and the gate records
+it as <code>BAD_CONFIDENCE</code>.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/selection/3/"><small>← Previous</small>Choosing strategies: Walk-forward on 112 names</a><a class="next" href="/notebook/agents/2/"><small>Next →</small>What the API actually costs</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

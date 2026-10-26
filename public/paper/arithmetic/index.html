@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §4 · The arithmetic that ends it</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §4 · The arithmetic that ends it">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+<script src="/paper/figures.js" defer></script>
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 7 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" aria-current="page" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="arithmetic">
+  <div class="sechead"><div class="secnum">§ 4</div><h2 class="title">The arithmetic that ends it</h2></div>
+
+  <p>At the measured mean |IC| of 0.014, the breadth needed for a usable information ratio follows directly from <span class="mono">IR = IC × √BR</span>:</p>
+
+  <figure>
+    <div class="chart" id="fig-gap"></div>
+    <figcaption><b>Figure 3 — Independent bets per year: required against available</b>
+    Logarithmic scale. The gap between what 31 price-derived signals supply at a monthly rebalance and what a marginally useful information ratio requires is a factor of nineteen; against IR 1.0 it is a factor of seventy-six.</figcaption>
+  </figure>
+
+  <div class="tablewrap"><table>
+    <caption>Table 9 — What the measured breadth supports</caption>
+    <thead><tr><th>Configuration</th><th>Bets/yr</th><th>IR</th><th>Years to t = 2</th></tr></thead>
+    <tbody>
+      <tr class="hi"><td class="lab">5.57 breadth × monthly rebalance</td><td>67</td><td class="neg">0.11</td><td class="neg">305</td></tr>
+      <tr><td class="lab">5.57 breadth × weekly rebalance</td><td>290</td><td>0.24</td><td>70</td></tr>
+      <tr><td class="lab">8.40 breadth × weekly rebalance</td><td>437</td><td>0.29</td><td>47</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Weekly rebalancing was already eliminated in §2.6: at that turnover the measured spreads consume the edge. So the honest row is the first one.</p>
+
+  <p>Going from 3 signals to 31 bought an effective breadth of 5.57. <strong>The marginal signal is worth about 0.2 of a bet.</strong> Closing a two-orders-of-magnitude gap by continuing down that path would require thousands of additions, each less independent than the last. This is not a statement that our search was insufficiently thorough. It is a statement about the slope.</p>
+
+  <p>There is also a structural reason it had to come out this way. Every signal in the catalogue is computable by anyone with a CSV of daily bars and has been for thirty years.</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/clusters/"><small>← Previous</small>§3 · Thirty-one signals are six bets</a><a class="next" href="/paper/errata/"><small>Next →</small>§5 · Errors the harness caught</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

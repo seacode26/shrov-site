@@ -3,9 +3,9 @@
 The public site at **https://www.shrov.com**: the paper *Thirty-One Signals, Six Bets*, its lab notebook, and a short home page. Static files, served by a Cloudflare Worker (static assets only, no code).
 
 ## Layout
-- `public/`: what is served, committed as built. `index.html` and `about/` are hand-written; `paper/` and `notebook/` are generated.
+- `public/`: what is served, committed as built. `index.html` and `about/` are hand-written. `paper/` (an overview plus 10 parts) and `notebook/` (7 chapters, split into pages of about three screens) are generated, and no page is long.
 - `content/`: the publishable copies of the paper (`paper.html`) and notebook (`notebook.md`). They are drawn from the private lab repository and scrubbed.
-- `tools/build.py`: renders `content/` into `public/`. With `--lab <path to ibkr-lab>` it first refreshes `content/`, applying its edit list and refusing anything that looks like an account id or credential.
+- `tools/build.py`: renders `content/` into `public/` (part boundaries: `PAPER_PARTS`; chapters: `NOTEBOOK_CHAPTERS`; page length: `PAGE_CHARS`). It also re-points home-page links to notebook headings at whichever page now holds them. With `--lab <path to ibkr-lab>` it first refreshes `content/`, applying its edit list and refusing anything that looks like an account id or credential.
 
 ```bash
 pip install markdown==3.7

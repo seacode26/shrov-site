@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing strategies (2/3) — Lab notebook — shrov</title>
+<meta name="description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<meta property="og:title" content="Choosing strategies (2/3) — Lab notebook — shrov">
+<meta property="og:description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 3 of 7 · page 2 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" aria-current="page" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Choosing strategies <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/selection/">1</a><a href="/notebook/selection/2/" aria-current="page">2</a><a href="/notebook/selection/3/">3</a></nav><article class="nbody"><h2 id="overnight-vs-intraday">Overnight vs intraday</h2>
+<pre><code class="language-bash">python fetch_yahoo.py --years 10 --adjust split --out data/bars_10y_split.csv
+python overnight.py --bars data/bars_10y_split.csv
+</code></pre>
+<p>Splits each name's price return into two legs that multiply back to it:
+<code>overnight = open(t)/close(t-1)</code>, <code>intraday = close(t)/open(t)</code>.</p>
+<p><strong>Use a split-only file.</strong> The usual <code>adjclose/close</code> adjustment cancels out of
+the intraday leg (same factor on open and close) but not the overnight one,
+where consecutive bars carry different factors — that credits every dividend to
+an overnight gap. <code>--adjust split</code> exists for this.</p>
+<p>Note that Yahoo's raw <code>quote</code> values are <strong>already split-adjusted</strong>; verified
+against NVDA's 2024 10-for-1, which runs 120.89 → 121.79 straight through. So
+<code>--adjust split</code> applies no factor at all. Applying one double-adjusts and was
+wrong by 40× for NVDA before this was caught. <code>test_overnight.py</code> fails if the
+committed file ever shows a split-shaped gap.</p>
+<p><strong>SPY, 2016–2026, the one unbiased read:</strong></p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>leg</th>
+<th>cumulative</th>
+<th>annualised</th>
+<th>Sharpe</th>
+<th>bps/session</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>overnight</td>
+<td>+138.3%</td>
+<td>+9.10%</td>
+<td>0.81</td>
+<td>3.72</td>
+</tr>
+<tr>
+<td>intraday</td>
+<td>+47.6%</td>
+<td>+3.98%</td>
+<td>0.35</td>
+<td>1.92</td>
+</tr>
+</tbody>
+</table></div>
+<p>The effect is real and it is not stable. 2022 was −14.7% overnight and 2023
++4.3%, against +22.3% in 2024. Break-even round-trip cost is 3.72bps — one
+round trip per session means the mean <em>is</em> the hurdle — leaving roughly
++3.7%/yr at 2bps and nothing at 5bps.</p>
+<p>The all-names figure (+17.6%/yr overnight) is <strong>survivorship-biased</strong>: the
+universe is 20 mega-caps chosen today. Dropping the five biggest winners takes
+it to +11.3%/yr. Prefer the SPY row.</p>
+<p>This is a measurement, not a strategy. Capturing the overnight leg needs
+MOC/MOO execution the daily-bar replay engine cannot represent — it fills
+against the <em>next</em> bar — so it is deliberately not wired into the harness.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/selection/"><small>← Previous</small>Walk-forward (the thing that makes comparisons mean anything)</a><a class="next" href="/notebook/selection/3/"><small>Next →</small>Walk-forward on 112 names</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

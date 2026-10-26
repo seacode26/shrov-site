@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §6–7 · Limits, and what would change the answer</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §6–7 · Limits, and what would change the answer">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 9 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" aria-current="page" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="limits">
+  <div class="sechead"><div class="secnum">§ 6</div><h2 class="title">Limitations</h2></div>
+  <ul>
+    <li><strong>One decade, one regime.</strong> September 2016 to September 2026 contains a historic bull market and two short drawdowns. A momentum book that fails here might not fail in a different regime, and a short leg that loses money here is being asked to fight the trend of the whole sample.</li>
+    <li><strong>Survivorship is controlled, not eliminated.</strong> Equal-weighting the same universe removes the bias from the <em>comparison</em>. It does not make the universes representative — the construction premia of +150 and +226 points show how far from representative they are.</li>
+    <li><strong>Daily bars only.</strong> No intraday data, and no market-on-close or market-on-open execution. The overnight/intraday decomposition we measured (SPY: +9.10%/yr overnight against +3.98% intraday, Sharpe 0.81 vs 0.35) is deliberately <em>not</em> wired into the harness, because capturing it needs execution the daily-bar engine cannot represent.</li>
+    <li><strong>Spreads are quoted, current, and delayed.</strong> Measured in 2026 and applied to a nine-year history.</li>
+    <li><strong>Thirty-one signals is not "all signals."</strong> It is 31 price-derived signals. The breadth result is about that class, and the paper's conclusion is scoped to it.</li>
+    <li><strong>The IC study is in-sample across the whole decade.</strong> That is deliberate — it is a decision about whether to keep building, not a strategy — but it means the null is a null on the most favourable possible reading. In-sample failure is dispositive in a way in-sample success never is.</li>
+    <li><strong>One implementation, one author.</strong> No independent replication.</li>
+  </ul>
+</section>
+
+<section id="forward">
+  <div class="sechead"><div class="secnum">§ 7</div><h2 class="title">What would change the answer, and why it cannot be tested</h2></div>
+
+  <p>The only thing that moves this result is genuinely orthogonal information — not another transformation of the same OHLCV series. The obvious candidate is text: earnings-call language, guidance changes, filings. Unlike the price path, its arithmetic is not absurd.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 10 — Hypothetical: 112 names × 4 earnings events = 448 bets/yr</caption>
+    <thead><tr><th>If text features gave IC</th><th>IR</th><th>Years to t = 2</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">0.02</td><td>0.42</td><td>22</td></tr>
+      <tr><td class="lab">0.03</td><td>0.64</td><td>10</td></tr>
+      <tr><td class="lab">0.05</td><td>1.06</td><td>4</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Ten years to significance is a different universe from three hundred and five. That is a real difference in kind, and it is the one place an LLM could plausibly contribute — as a source of features, not as a decision maker over the same prices it has already been shown to reproduce.</p>
+
+  <p class="pull">But it cannot be backtested honestly. A model trained through 2025 already knows what happened after a 2019 earnings call.</p>
+
+  <p>This is worth stating precisely because it defeats the specific defence this project relies on everywhere else. Our look-ahead prevention is structural: the strategy holds an object that has no method returning the future. That defence is <em>useless</em> here, because the contamination is not in the data handed to the model — it is in the weights. There is no held-out set, no windowing scheme, and no prompt discipline that removes it. A model can be instructed not to use hindsight; it cannot be made not to have it.</p>
+
+  <p>So the only valid test of the text path is forward, on paper, over years, on data that must be licensed. That is not an argument that it will not work. It is the price of finding out, and it should be paid knowingly rather than discovered after a backtest that was never capable of being honest.</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/errata/"><small>← Previous</small>§5 · Errors the harness caught</a><a class="next" href="/paper/conclusion/"><small>Next →</small>§8 · Conclusion</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

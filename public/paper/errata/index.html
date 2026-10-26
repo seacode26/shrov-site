@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §5 · Errors the harness caught</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §5 · Errors the harness caught">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 8 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" aria-current="page" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section id="errata">
+  <div class="sechead"><div class="secnum">§ 5</div><h2 class="title">Errors found, and why they are the evidence</h2></div>
+
+  <p>A null result is only worth reading if the apparatus that produced it was capable of producing a positive one. The strongest available evidence for that is the list of errors the harness caught — several of which would have manufactured an edge had they survived.</p>
+
+  <ol class="errata">
+    <li><span class="n">01</span><span><b>Split double-adjustment, wrong by 40×</b> Yahoo's quote values are already split-adjusted. Applying a split factor divided NVDA's pre-split history by 40 twice. Caught by a sanity check requiring split-only history to sit above dividend-adjusted history; a regression test now fails if the committed file ever shows a split-shaped gap.</span></li>
+    <li><span class="n">02</span><span><b>The test suite silently ran 110 of 141 tests</b> An unterminated f-string meant a module would not import, so <code>unittest discover</code> collected a subset — and still printed OK.</span></li>
+    <li><span class="n">03</span><span><b>A commit landed with failing tests</b> A <code>tail</code> in a shell pipeline masked the exit code. Commits are now gated on the suite's actual status.</span></li>
+    <li><span class="n">04</span><span><b>Preflight reported "all checks passed" on an API that could not place orders</b> Read-only mode was enabled. An explicit order-permission probe was added.</span></li>
+    <li><span class="n">05</span><span><b>A paper-only guard that guarded nothing</b> The port check was described as one of three independent safeguards; the gateway in fact served live accounts on that port. The account-prefix assertion is the only load-bearing check, and the documentation was corrected to say so.</span></li>
+    <li><span class="n">06</span><span><b>Path divergence invalidated a cost sweep</b> Raising the assumed half-spread <em>increased</em> measured excess, because one changed fill changes every later position. Cost sensitivity was rebuilt to hold order flow fixed.</span></li>
+    <li><span class="n">07</span><span><b>A recorder double-called a stateful strategy</b> This desynchronised the rebalance cadence and silently produced an empty sample.</span></li>
+    <li><span class="n">08</span><span><b>The market-neutral book went $103k net short on $100k</b> Dollar neutrality decays asymmetrically — a losing short grows as a share of the book while a losing long shrinks. NAV reached −$12,091 because the simulator had no margin logic at all. Both were fixed; forced liquidations are now recorded, and any non-zero count means the run hit a wall a real account would have hit.</span></li>
+    <li><span class="n">09</span><span><b>Limits measuring themselves, five or six times</b> Scoring a strategy under limits that forbid its trades measures the limits. Each occurrence is documented in place.</span></li>
+    <li><span class="n">10</span><span><b>An overstated claim, corrected by replication</b> The combination-lift agreement was reported as accurate "within 6%" and called the cleanest result in the project. The small-cap run showed the statistic is unstable. See §3.3.</span></li>
+  </ol>
+
+  <p>Items 01, 06, 07 and 08 would each have produced a flattering number. Item 10 is included because the correction arrived from a replication we had already committed to running, not from a reviewer.</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/arithmetic/"><small>← Previous</small>§4 · The arithmetic that ends it</a><a class="next" href="/paper/limits/"><small>Next →</small>§6–7 · Limits, and what would change the answer</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

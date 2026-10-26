@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtesting and costs (3/3) — Lab notebook — shrov</title>
+<meta name="description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<meta property="og:title" content="Backtesting and costs (3/3) — Lab notebook — shrov">
+<meta property="og:description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 2 of 7 · page 3 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" aria-current="page" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1 class="cont">Backtesting and costs <span>continued</span></h1></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/costs/">1</a><a href="/notebook/costs/2/">2</a><a href="/notebook/costs/3/" aria-current="page">3</a></nav><article class="nbody"><h3 id="scoring">Scoring</h3>
+<p>Return is the least interesting output. <code>labtrader/metrics.py</code> also reports:</p>
+<ul>
+<li><strong>turnover</strong> — LLM agents overtrade and simulated commissions do not hurt</li>
+<li><strong>concentration</strong> — HHI and effective names, the NBER paper's complaint</li>
+<li><strong>overlap</strong> — <code>mean_pairwise_overlap</code> across independent runs, the herding measure</li>
+<li><strong>calibration</strong> — bucketed by the confidence the agent <em>stated</em>, scored on
+  every proposal including gate-rejected ones. A well-calibrated agent that
+  loses money is more promising than a lucky one that does not.</li>
+</ul></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/costs/2/"><small>← Previous</small>Measured, not assumed</a><a class="next" href="/notebook/selection/"><small>Next →</small>Choosing strategies: Walk-forward (the thing that makes comparisons mean anything)</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

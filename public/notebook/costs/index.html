@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backtesting and costs (1/3) — Lab notebook — shrov</title>
+<meta name="description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<meta property="og:title" content="Backtesting and costs (1/3) — Lab notebook — shrov">
+<meta property="og:description" content="Timing, the shared risk gate, the execution model, and spreads measured from live quotes.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 2 of 7 · page 1 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" aria-current="page" title="Backtesting and costs">2</a><a href="/notebook/selection/" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>Backtesting and costs</h1><p class="deck">Timing, the shared risk gate, the execution model, and spreads measured from live quotes.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/costs/" aria-current="page">1</a><a href="/notebook/costs/2/">2</a><a href="/notebook/costs/3/">3</a></nav><article class="nbody"><h2 id="backtesting-milestone-4">Backtesting (milestone 4)</h2>
+<pre><code class="language-bash">python backtest.py
+</code></pre>
+<p>Runs on a synthetic random walk, so it works with no data at all. Those numbers
+are meaningless by construction — the walk has no structure to find.</p>
+<p>For real bars without waiting on IBKR entitlements (prices back-adjusted for
+splits and dividends; volume left raw, see the module docstring):</p>
+<pre><code class="language-bash">python fetch_yahoo.py --years 2 --out data/bars.csv
+</code></pre>
+<p>Once IBKR entitlements exist, that is the source of record:</p>
+<pre><code class="language-bash">python fetch_bars.py --port 4002 --years 3 --out data/bars.csv
+</code></pre>
+<pre><code class="language-bash">python backtest.py --bars data/bars.csv
+</code></pre>
+<h3 id="timing-convention">Timing convention</h3>
+<blockquote>
+<p>A strategy decides at the close of day <em>t</em> using data through day <em>t</em>, and
+its orders execute against day <em>t+1</em>'s bar.</p>
+</blockquote>
+<p>The first half is enforced structurally: <code>MarketView</code> is pinned to one date and
+has no method that returns a later bar, so look-ahead is not something to
+remember to avoid. <code>test_no_attribute_exposes_the_full_series</code> fails if a
+refactor ever hands a strategy the whole series.</p>
+<p>The second half falls out of the engine: accepted proposals sit in <code>pending</code>
+and are only touched on the next iteration. Unfilled day orders expire, which
+matches the <code>tif="DAY"</code> the live broker sends.</p>
+<h3 id="the-replay-uses-the-same-gate">The replay uses the <em>same</em> gate</h3>
+<p><code>replay()</code> calls the same <code>evaluate()</code> as the live path, with a
+<code>DU-REPLAY</code> account id to satisfy the paper-prefix check. A backtest that gates
+differently from production is testing something other than what will run.</p>
+<h3 id="execution-model">Execution model</h3>
+<p>Three assumptions, all configurable, ordered by how much they were measured to
+matter:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>Assumption</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>half_spread_bps</code></td>
+<td>1.5bps</td>
+<td>charged whenever an order <strong>takes</strong> liquidity</td>
+</tr>
+<tr>
+<td><code>max_participation</code></td>
+<td>10% of bar volume</td>
+<td>large orders fill partially</td>
+</tr>
+<tr>
+<td><code>slippage_bps</code></td>
+<td>2bps</td>
+<td>impact, market orders only</td>
+</tr>
+<tr>
+<td><code>require_through_limit</code></td>
+<td><code>True</code></td>
+<td>a touch is not a fill</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Crossing is not free.</strong> A market order, or a limit priced at or through the
+bar's open, takes liquidity and pays <code>half_spread_bps</code>. A limit resting away
+from the market pays nothing — it provides liquidity, and only fills when price
+comes to it. Until this existed, momentum posted marketable limits 0.2% through
+the market and crossed 6,680 times at exactly zero modelled cost, at ~29x
+annual turnover.</p>
+<p>Sweeping the assumption against equal-weighting the same 111 names:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>half-spread</th>
+<th>return</th>
+<th>vs SPY</th>
+<th>vs equal-weight</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0bps</td>
+<td>+392.9%</td>
+<td>+130.2%</td>
+<td>+68.6%</td>
+</tr>
+<tr>
+<td>1.5bps (default)</td>
+<td>+367.9%</td>
+<td>+105.3%</td>
+<td>+43.6%</td>
+</tr>
+<tr>
+<td>5.0bps</td>
+<td>+316.8%</td>
+<td>+54.1%</td>
+<td><strong>−7.5%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Momentum's edge over equal-weight is roughly the size of the cost assumption,
+and inverts by 5bps. Combined with an information ratio of 0.14 (t=0.42 over
+9.2 years), <strong>the excess over equal-weight is not established.</strong> The advantage
+over SPY is more robust, but SPY is the wrong comparison for a survivorship-
+biased universe.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/harness/2/"><small>← Previous</small>The harness: What the sandbox lies about</a><a class="next" href="/notebook/costs/2/"><small>Next →</small>Measured, not assumed</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

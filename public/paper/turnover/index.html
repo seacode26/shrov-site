@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirty-One Signals, Six Bets — §2 · Turnover, replication, market-neutral</title>
+<meta name="description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<meta property="og:title" content="Thirty-One Signals, Six Bets — §2 · Turnover, replication, market-neutral">
+<meta property="og:description" content="Thirty-one price signals collapse to about six independent bets — why a retail account cannot detect an edge it might have.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/paper/paper.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/" aria-current="page">Paper</a><a href="/notebook/">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/paper/">Thirty-One Signals, Six Bets</a> · part 4 of 10</p><nav class="parts" aria-label="Parts"><a href="/paper/" title="Overview">◆</a><a href="/paper/harness/" title="§1 · Why it needed a harness">1</a><a href="/paper/agents/" title="§2 · Agents and strategy selection">2</a><a href="/paper/costs/" title="§2 · Costs and capacity">3</a><a href="/paper/turnover/" aria-current="page" title="§2 · Turnover, replication, market-neutral">4</a><a href="/paper/breadth/" title="§3 · No signal has an edge">5</a><a href="/paper/clusters/" title="§3 · Thirty-one signals are six bets">6</a><a href="/paper/arithmetic/" title="§4 · The arithmetic that ends it">7</a><a href="/paper/errata/" title="§5 · Errors the harness caught">8</a><a href="/paper/limits/" title="§6–7 · Limits, and what would change the answer">9</a><a href="/paper/conclusion/" title="§8 · Conclusion">10</a></nav><div class="paperbody"><section><div class="sechead"><div class="secnum">§ 2</div><h2 class="title">Nine experiments, continued</h2></div>
+<h3><span class="tag">2.6 &middot; Turnover</span>Costs stop mattering; the signal was never there</h3>
+  <p>Twelve configurations per universe (lookback 60/120/250 × hold 21/63/126/252). Turnover falls from 22–30× to 0.6–3.6×, and in small caps the spread drag collapses from 43 points to under 2. The binding constraint is removed.</p>
+  <p>What it reveals is a random field. Excess over equal-weight ranges from −228 to +225 points with a standard deviation of ~129, and the largest swing from a <em>single</em> parameter step is 302 points. A real effect produces a gradient; this does not. The standout cell (+225%, or +4.82%/yr) was chosen from twelve draws whose expected maximum under a pure-noise null sits about 210 points above the mean — the observed 225 is almost exactly what noise looks like once sorted.</p>
+
+  <h3><span class="tag">2.7 &middot; Pre-registered replication</span>Confirmed noise</h3>
+  <p>The standout cell was then tested as a single named configuration, on windows it had not been chosen on.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 5 — look = 250 / hold = 21, year-by-year excess over equal-weight</caption>
+    <thead><tr><th>Statistic</th><th>Large cap</th><th>Small cap</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Years positive</td><td>5 / 9</td><td>4 / 9</td></tr>
+      <tr><td class="lab">Mean excess</td><td>+5.5%/yr</td><td>+3.9%/yr</td></tr>
+      <tr class="hi"><td class="lab">t-statistic</td><td class="neg">1.07</td><td class="neg">1.32</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>The large-cap +225% comes almost entirely from three years — 2020, 2024 and 2026. Six of nine years are flat or negative.</p>
+
+  <h3><span class="tag">2.8 &middot; Market-neutral</span>The construction worked; the argument did not</h3>
+  <p>Every result so far carried the market factor: one giant correlated bet whose variance swamps everything else. The stated rationale was explicit and falsifiable — at a 4%/yr excess, 16% volatility gives IR 0.25 and needs 64 years to reach t = 2, while 6% volatility gives IR 0.67 and needs 9. Same alpha; removing variance nobody is paying for was supposed to be the highest-leverage change available.</p>
+
+  <div class="tablewrap"><table>
+    <caption>Table 6 — Long/short cross-sectional books, 20 names per side</caption>
+    <thead><tr><th>Book</th><th>Return</th><th>Vol</th><th>Sharpe</th><th>Beta</th><th>Max DD</th><th>Margin calls</th></tr></thead>
+    <tbody>
+      <tr><td class="lab">Long-only momentum</td><td>+519.0%</td><td>22.3%</td><td>1.04</td><td>0.96</td><td>30.1%</td><td>0</td></tr>
+      <tr><td class="lab">L/S momentum 12−1</td><td class="neg">−49.9%</td><td>22.1%</td><td class="neg">−0.25</td><td>−0.14</td><td>55.9%</td><td>1</td></tr>
+      <tr><td class="lab">L/S reversal 5d</td><td>+0.9%</td><td>17.1%</td><td>0.09</td><td>0.08</td><td>32.0%</td><td>0</td></tr>
+      <tr><td class="lab">L/S low volatility</td><td class="neg">−45.2%</td><td>17.3%</td><td class="neg">−0.31</td><td>−0.31</td><td>51.2%</td><td>1</td></tr>
+      <tr><td class="lab">L/S combined</td><td class="neg">−40.9%</td><td>20.1%</td><td class="neg">−0.20</td><td>0.05</td><td>55.8%</td><td>1</td></tr>
+      <tr><td class="lab">Buy-and-hold SPY</td><td>+242.7%</td><td>—</td><td>—</td><td>1.00</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <p><strong>Beta collapsed from 0.96 to roughly zero — the construction does what it says.</strong> The variance reduction did not follow. Volatility stayed near 20% instead of falling toward 6%, because the short leg cancels the market factor while contributing its own idiosyncratic risk: you replace one correlated bet with forty individual ones. The arithmetic that justified the whole exercise does not survive its own test.</p>
+  <p>The alpha is also negative — shorting the bottom of a momentum ranking through a decade-long bull market loses money — and three of five books hit margin calls.</p>
+  <p>One constraint is worth recording because it makes this permanently a measurement rather than a strategy: <strong>short selling is not available in an IRA</strong>, the natural home for an account like this. The long/short book exists to answer "is there alpha here at all" with the statistical power to see it, not to be deployed.</p>
+</section>
+
+</div><nav class="pn" aria-label="Previous and next"><a class="prev" href="/paper/costs/"><small>← Previous</small>§2 · Costs and capacity</a><a class="next" href="/paper/breadth/"><small>Next →</small>§3 · No signal has an edge</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>

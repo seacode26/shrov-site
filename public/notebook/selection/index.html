@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choosing strategies (1/3) — Lab notebook — shrov</title>
+<meta name="description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<meta property="og:title" content="Choosing strategies (1/3) — Lab notebook — shrov">
+<meta property="og:description" content="Walk-forward selection on two universes, and the overnight-versus-intraday split.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<nav class="site"><a class="mark" href="/">shrov</a><span><a href="/paper/">Paper</a><a href="/notebook/" aria-current="page">Notebook</a><a href="/about/">About</a><a href="/about/#contact">Contact</a></span></nav>
+<div class="wrap">
+<p class="crumb"><a href="/notebook/">Lab notebook</a> · chapter 3 of 7 · page 1 of 3</p><nav class="parts" aria-label="Chapters"><a href="/notebook/harness/" title="The harness">1</a><a href="/notebook/costs/" title="Backtesting and costs">2</a><a href="/notebook/selection/" aria-current="page" title="Choosing strategies">3</a><a href="/notebook/agents/" title="LLM agents">4</a><a href="/notebook/capacity/" title="Small caps and turnover">5</a><a href="/notebook/neutral/" title="Market-neutral">6</a><a href="/notebook/breadth/" title="Breadth">7</a></nav><header class="chap"><h1>Choosing strategies</h1><p class="deck">Walk-forward selection on two universes, and the overnight-versus-intraday split.</p></header><nav class="pages" aria-label="Pages in this chapter"><a href="/notebook/selection/" aria-current="page">1</a><a href="/notebook/selection/2/">2</a><a href="/notebook/selection/3/">3</a></nav><article class="nbody"><h2 id="walk-forward-the-thing-that-makes-comparisons-mean-anything">Walk-forward (the thing that makes comparisons mean anything)</h2>
+<pre><code class="language-bash">python wf.py --bars data/bars_10y.csv
+</code></pre>
+<p>Testing ten strategies on one window and keeping the best is how a backtest
+lies. The winner is whichever one best fit that window's noise. <code>walkforward.py</code>
+selects on a training window and measures on the <em>next</em> window, so nothing is
+ever scored on the data that chose it.</p>
+<p>The output to read is not the winner's return. It is:</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>diagnostic</th>
+<th>means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>selection hit rate</code></td>
+<td>how often the in-sample winner beat the median next fold; 50% is a coin flip</td>
+</tr>
+<tr>
+<td><code>rank correlation</code></td>
+<td>Spearman, in-sample vs out-of-sample rank; 0 = last window says nothing</td>
+</tr>
+<tr>
+<td><code>average candidate</code></td>
+<td>equal weight across all candidates — the bar selection must beat</td>
+</tr>
+<tr>
+<td><code>always X</code></td>
+<td>committing to one strategy and never re-choosing</td>
+</tr>
+<tr>
+<td><code>perfect hindsight</code></td>
+<td>upper bound, not achievable</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Result on 2016–2026, 14 folds, six candidates: selection did not work.</strong>
+Hit rate 36%, rank correlation +0.04, and walk-forward selection returned
++53.2% against +50.1% for simply averaging every candidate. Committing to one
+strategy and never re-choosing (<code>always trend-daily</code>, +115.4%) beat adaptive
+selection by 62 points, and buy-and-hold SPY beat everything at +184%.</p>
+<p>Four configurations were tried (rolling/anchored × return/Sharpe). The best,
+anchored-on-return, showed a 64% hit rate — which is 9 of 14 folds, p=0.21
+alone and p=0.61 after accounting for having tried four. That is not evidence,
+and searching configurations for the best hit rate is the same error one level
+up. The script now prints that p-value and says so.</p>
+<p>Candidates carry their own <code>RiskLimits</code>, because scoring a strategy under
+limits that forbid its trades measures the limits (see <code>TRENDCASH_LIMITS</code>).
+Strategies are passed as factories, never instances — they carry state across a
+run, and reusing one silently corrupts every fold after the first.</p></article><nav class="pn" aria-label="Previous and next"><a class="prev" href="/notebook/costs/3/"><small>← Previous</small>Backtesting and costs: Scoring</a><a class="next" href="/notebook/selection/2/"><small>Next →</small>Overnight vs intraday</a></nav><footer class="slim"><p><strong>Not investment advice.</strong> Research on simulated capital; the author is not a licensed adviser. · <a href="/about/#contact">Questions or corrections</a></p></footer>
+</div>
+</body>
+</html>
